@@ -1,5 +1,4 @@
 import { Button } from "@everleap/design-system";
-import { EverleapLogo } from "@everleap/design-system";
 import Link from "next/link";
 import { Input } from "@everleap/design-system";
 
@@ -8,7 +7,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-muted/30">
             <div className="max-w-md w-full p-8 bg-card rounded-lg shadow-sm border">
                 <div className="flex flex-col items-center mb-8">
-                    <EverleapLogo className="h-10 w-10 mb-2" />
+                    <img src="/Logo.svg" alt="Everleap Logo" className="h-10 w-auto mb-2" />
                     <h1 className="text-2xl font-bold">Welcome Back</h1>
                     <p className="text-sm text-muted-foreground">Sign in to your Everleap account</p>
                 </div>

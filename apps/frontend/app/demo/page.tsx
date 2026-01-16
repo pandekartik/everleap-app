@@ -30,7 +30,6 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 
 import { CalendarIcon, Bell, Check, Menu, Search, Terminal, Moon, Sun, ShieldCheck } from "lucide-react";
 import { useTheme } from "next-themes";
-import { EverleapLogo } from "@everleap/design-system";
 
 export default function Home() {
   const [date, setDate] = React.useState<Date | undefined>(new Date())
@@ -47,7 +46,7 @@ export default function Home() {
     <div className="min-h-screen bg-background text-foreground font-sans pb-20">
       <div className="border-b bg-card/60 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto max-w-5xl py-3 px-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <EverleapLogo />
+          <img src="/Logo.svg" alt="Everleap Logo" className="h-10 w-auto" />
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             {mounted && (
               <Button

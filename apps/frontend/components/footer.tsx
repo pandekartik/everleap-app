@@ -1,4 +1,4 @@
-import { EverleapLogo } from "@everleap/design-system";
+
 
 export function Footer() {
     return (
@@ -6,7 +6,7 @@ export function Footer() {
             <div className="container mx-auto max-w-5xl py-12 px-4">
                 <div className="flex flex-col md:flex-row justify-between items-start gap-8">
                     <div className="space-y-4">
-                        <EverleapLogo />
+                        <img src="/Logo.svg" alt="Everleap Logo" className="h-10 w-auto" />
                         <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
                             A comprehensive product design system for building modern, consistent web applications.
                         </p>
