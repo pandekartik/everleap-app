@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Everleap Monorepo
 
-## Getting Started
+Welcome to the Everleap monorepo! This repository houses the frontend applications and shared packages for the Everleap platform. It is built using [Turborepo](https://turbo.build/repo) and [pnpm workspaces](https://pnpm.io/workspaces).
 
-First, run the development server:
+## 📂 Project Structure
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+.
+├── apps
+│   ├── api                 # Hono/Node.js backend API
+│   ├── landing             # Next.js Landing Page (everleap.in mirror)
+│   └── web                 # Main Next.js Web Application (Dashboard/Platform)
+├── packages
+│   └── design-system       # Shared UI components (Radix UI + Tailwind CSS)
+├── infra                   # Infrastructure configuration (Terraform/Docker)
+└── package.json            # Root configuration
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Monorepo Manager**: Turborepo
+- **Package Manager**: pnpm
+- **Frameworks**: Next.js (Web/Landing), Hono (API)
+- **Styling**: Tailwind CSS v4, Radix UI
+- **Language**: TypeScript
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Getting Started
 
-## Learn More
+### Prerequisites
 
-To learn more about Next.js, take a look at the following resources:
+- Node.js >= 18
+- pnpm (required)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Install pnpm (if not already installed):**
+```bash
+npm install -g pnpm
+# or
+corepack enable
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Installation
 
-## Deploy on Vercel
+Install dependencies from the root directory:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm install
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 💻 Running Applications
+
+You can run applications individually or all together using Turbo.
+
+#### Option 1: Run All Apps (Recommended for Full Stack Dev)
+
+```bash
+npx turbo dev
+```
+- **Web App**: [http://localhost:3000](http://localhost:3000)
+- **Landing Page**: [http://localhost:3001](http://localhost:3001)
+- **API**: [http://localhost:3002](http://localhost:3002)
+
+#### Option 2: Run Individual Apps
+
+If you only need to work on one application, you can run it directly to save resources.
+
+**Landing Page:**
+```bash
+npx pnpm --filter landing dev
+```
+
+**Web App:**
+```bash
+npx pnpm --filter web dev
+```
+
+**API:**
+```bash
+npx pnpm --filter api dev
+```
+
+## 🎨 Design System
+
+Shared UI components are located in `packages/design-system`. These components are used by both `web` and `landing` apps to ensure visual consistency.
+
+- **Usage**: Import components directly from `@everleap/design-system`.
+  ```tsx
+  import { Button, EverleapLogo } from "@everleap/design-system";
+  ```
+- **Development**: Changes made in `packages/design-system` are instantly reflected in the running applications thanks to the monorepo setup.
+
+## 🤝 Collaborative Development
+
+1.  **Branching**: Create feature branches from `main`.
+2.  **Dependencies**: Always add dependencies to the specific app or package, not the root.
+    ```bash
+    # Example: Add 'dayjs' to the web app
+    pnpm --filter web add dayjs
+    ```
+3.  **Commits**: Write clear commit messages.
+4.  **Pull Requests**: Push your branch and open a PR on GitHub for review.
+
+## ⚠️ Troubleshooting
+
+**"Unable to find package manager binary" error with Turbo:**
+This usually means `pnpm` is not in your system PATH.
+- **Fix**: Run `npm install -g pnpm`.
+- **Workaround**: Run apps individually using the `npx pnpm --filter <app> dev` commands listed above.
+
+## 📦 Building for Production
+
+To build all apps and packages:
+
+```bash
+npx turbo build
+```
+
+This commands caches build artifacts, so subsequent builds are significantly faster.
