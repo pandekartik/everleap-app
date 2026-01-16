@@ -1,0 +1,8 @@
+[00:00:01.266] Server  LOG     ✓ Ready in 903ms
+[00:01:13.429] Browser ERROR   You provided a `value` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultValue`. Otherwise, set either `onChange` or `readOnly`.
+[00:01:20.448] Browser LOG     increase
+[00:01:20.613] Browser LOG     increase
+[00:02:04.748] Server  LOG     ✓ Compiled in 622ms
+[00:04:28.056] Server  LOG     ✓ Compiled in 456ms
+[00:04:42.079] Server  LOG     ✓ Compiled in 376ms
+[00:08:17.421] Server  LOG     ✓ Compiled in 214ms
