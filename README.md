@@ -7,9 +7,11 @@ Welcome to the Everleap monorepo! This repository houses the frontend applicatio
 ```text
 .
 ├── apps
-│   ├── api                 # Hono/Node.js backend API
-│   ├── landing             # Next.js Landing Page (everleap.in mirror)
-│   └── web                 # Main Next.js Web Application (Dashboard/Platform)
+│   ├── backend             # Hono/Node.js backend API (formerly api)
+│   └── frontend            # Main Application (Landing + Web App merged)
+│       ├── /               # Landing Page
+│       ├── /login          # Login Page
+│       └── /demo           # Component Demo (Old Web root)
 ├── packages
 │   └── design-system       # Shared UI components (Radix UI + Tailwind CSS)
 ├── infra                   # Infrastructure configuration (Terraform/Docker)
@@ -63,19 +65,17 @@ npx turbo dev
 
 If you only need to work on one application, you can run it directly to save resources.
 
-**Landing Page:**
+**Frontend:**
 ```bash
-npx pnpm --filter landing dev
+npx pnpm --filter frontend dev
 ```
+- Landing: http://localhost:3000
+- Login: http://localhost:3000/login
+- Demo: http://localhost:3000/demo
 
-**Web App:**
+**Backend:**
 ```bash
-npx pnpm --filter web dev
-```
-
-**API:**
-```bash
-npx pnpm --filter api dev
+npx pnpm --filter backend dev
 ```
 
 ## 🎨 Design System

@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+/* Scan design system files */
+@source "./**/*.{ts,tsx}";
+
+@custom-variant dark (&:where([data-mode=dark], [data-mode=dark] *));
+
+@theme {
+    --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+
+    --color-border: var(--ds-border);
+    --color-input: var(--ds-border);
+    --color-ring: var(--ds-ring);
+
+    --border-color-DEFAULT: var(--ds-border);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --radius: var(--ds-radius);
+    --radius-sm: calc(var(--ds-radius) - 2px);
+    --radius-md: calc(var(--ds-radius) - 0px);
+    --radius-lg: calc(var(--ds-radius) + 2px);
+}
+
+:root {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    /* Slate 900 */
+
+    /* Brand: rgb(6, 191, 179) -> Hex #06BFB3 */
+    --primary: #06bfb3;
+    --primary-foreground: #ffffff;
+
+    --secondary: #f1f5f9;
+    /* Slate 100 */
+    --secondary-foreground: #0f172a;
+
+    --muted: #f8fafc;
+    /* Slate 50 */
+    --muted-foreground: #64748b;
+    /* Slate 500 */
+
+    --accent: #f1f5f9;
+    --accent-foreground: #0f172a;
+
+    --destructive: #ef4444;
+    /* Red 500 */
+    --destructive-foreground: #ffffff;
+
+    --success: #22c55e;
+    /* Green 500 */
+    --success-foreground: #ffffff;
+
+    --warning: #f59e0b;
+    /* Amber 500 */
+    --warning-foreground: #ffffff;
+
+    --info: #3b82f6;
+    /* Blue 500 */
+    --info-foreground: #ffffff;
+
+    --ds-border: #f1f5f9;
+    /* Slate 100 */
+    --ds-ring: #06bfb3;
+    --ds-radius: 0.375rem;
+
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+}
+
+.dark {
+    --background: #020617;
+    /* Slate 950 */
+    --foreground: #f8fafc;
+    /* Slate 50 */
+
+    --primary: #06bfb3;
+    --primary-foreground: #ffffff;
+
+    --secondary: #1e293b;
+    /* Slate 800 */
+    --secondary-foreground: #f8fafc;
+
+    --muted: #0f172a;
+    /* Slate 900 */
+    --muted-foreground: #94a3b8;
+    /* Slate 400 */
+
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
+
+    --destructive: #7f1d1d;
+    /* Red 900 */
+    --destructive-foreground: #f8fafc;
+
+    --success: #14532d;
+    /* Green 900 */
+    --success-foreground: #f0fdf4;
+
+    --warning: #78350f;
+    /* Amber 900 */
+    --warning-foreground: #fffbeb;
+
+    --info: #1e3a8a;
+    /* Blue 900 */
+    --info-foreground: #eff6ff;
+
+    --ds-border: #1e293b;
+    /* Slate 800 */
+    --ds-ring: #06bfb3;
+
+    --card: #020617;
+    --card-foreground: #f8fafc;
+
+    --popover: #020617;
+    --popover-foreground: #f8fafc;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    /* User requested Base font 15px */
+    line-height: 1.5;
+}

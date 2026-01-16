@@ -17,7 +17,7 @@ export default function LandingPage() {
                         <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
                     </nav>
                     <div className="flex items-center gap-4">
-                        <a href="#" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Login</a>
+                        <a href="/login" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Login</a>
                         <Button>Sign Up</Button>
                     </div>
                 </div>
