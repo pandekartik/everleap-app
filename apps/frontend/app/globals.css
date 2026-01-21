@@ -1,2 +1,8 @@
 @import "../../../packages/design-system/globals.css";
 @source "../../**/*.{ts,tsx}";
+
+@layer base {
+  html {
+    font-size: 15px;
+  }
+}
