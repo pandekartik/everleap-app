@@ -10,7 +10,8 @@ import {
     ArrowRight,
     CheckCircle2,
     Clock,
-    AlertCircle
+    AlertCircle,
+    Plus
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,10 +33,10 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex gap-3">
                     {user?.role !== "ORG_ADMIN" && (
-                        <Link href="/hiring">
+                        <Link href="/hiring/create">
                             <Button>
-                                <Briefcase className="mr-2 h-4 w-4" />
-                                Create New Job
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create Job
                             </Button>
                         </Link>
                     )}

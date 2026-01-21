@@ -19,23 +19,29 @@ import { Button } from "@everleap/design-system";
 import { useAuth } from "@/lib/mock-auth";
 
 const NAV_ITEMS = [
-    // HR / Recruiter Views
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER", "ORG_ADMIN"] },
-    { name: "Hiring", href: "/hiring", icon: Briefcase, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"] },
-    { name: "Candidates", href: "/candidates", icon: Users, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"] },
-    { name: "Interviews", href: "/interviews", icon: Calendar, roles: ["HR_ADMIN", "HIRING_MANAGER", "INTERVIEWER"] },
-    { name: "Offers", href: "/offers", icon: FileSignature, roles: ["HR_ADMIN"] },
-    { name: "Onboarding", href: "/onboarding", icon: Rocket, roles: ["HR_ADMIN", "HIRING_MANAGER"] },
+    // COMMAND CENTER
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER", "ORG_ADMIN"], section: "command" },
 
-    // Shared / Org Admin Views
-    { name: "Employees", href: "/employees", icon: Building2, roles: ["ORG_ADMIN", "HR_ADMIN"] },
+    // HIRING EXECUTION
+    { type: "divider", section: "hiring", label: "HIRING", roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"] },
+    { name: "Jobs", href: "/hiring", icon: Briefcase, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"], section: "hiring" },
+    { name: "Candidates", href: "/candidates", icon: Users, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"], section: "hiring" },
 
-    // Org Admin Specific
-    { name: "Billing & Plans", href: "/billing", icon: FileSignature, roles: ["ORG_ADMIN"] },
+    // PIPELINE
+    { type: "divider", section: "pipeline", label: "PIPELINE", roles: ["HR_ADMIN", "HIRING_MANAGER", "INTERVIEWER"] },
+    { name: "Interviews", href: "/interviews", icon: Calendar, roles: ["HR_ADMIN", "HIRING_MANAGER", "INTERVIEWER"], section: "pipeline" },
+    { name: "Offers", href: "/offers", icon: FileSignature, roles: ["HR_ADMIN"], section: "pipeline" },
+    { name: "Onboarding", href: "/onboarding", icon: Rocket, roles: ["HR_ADMIN", "HIRING_MANAGER"], section: "pipeline" },
 
-    // Settings (Context Aware)
-    { name: "Reports", href: "/reports", icon: BarChart3, roles: ["HR_ADMIN", "ORG_ADMIN"] },
-    { name: "Settings", href: "/settings", icon: Settings, roles: ["ORG_ADMIN", "HR_ADMIN"] },
+    // SETTINGS
+    { type: "divider", section: "settings", label: "SETTINGS", roles: ["HR_ADMIN", "ORG_ADMIN"] },
+    { name: "Settings", href: "/settings", icon: Settings, roles: ["ORG_ADMIN", "HR_ADMIN"], section: "settings" },
+
+    // ORG ADMIN ONLY
+    { type: "divider", section: "org-admin", label: "ORGANIZATION", roles: ["ORG_ADMIN"] },
+    { name: "Employees", href: "/employees", icon: Building2, roles: ["ORG_ADMIN"], section: "org-admin" },
+    { name: "Billing & Plans", href: "/billing", icon: FileSignature, roles: ["ORG_ADMIN"], section: "org-admin" },
+    { name: "Reports", href: "/reports", icon: BarChart3, roles: ["ORG_ADMIN"], section: "org-admin" },
 ];
 
 export function Sidebar() {
@@ -44,6 +50,19 @@ export function Sidebar() {
 
     // Default to strict empty if no user, but should be handled by Shell
     const userRole = user?.role || "GUEST";
+
+    // Filter items based on role and determine which dividers to show
+    const filteredItems = NAV_ITEMS.filter(item => {
+        if (item.type === "divider") {
+            // Show divider only if there are visible items in that section
+            return NAV_ITEMS.some(navItem =>
+                navItem.section === item.section &&
+                navItem.type !== "divider" &&
+                navItem.roles.includes(userRole)
+            );
+        }
+        return item.roles?.includes(userRole);
+    });
 
     return (
         <div className="w-64 border-r border-slate-100 h-screen bg-card flex flex-col fixed left-0 top-0 z-50">
@@ -56,7 +75,17 @@ export function Sidebar() {
 
             {/* Navigation */}
             <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-                {NAV_ITEMS.filter(item => item.roles.includes(userRole)).map((item) => {
+                {filteredItems.map((item, index) => {
+                    if (item.type === "divider") {
+                        return (
+                            <div key={`divider-${item.section}`} className={`px-3 pt-4 pb-2 ${index > 0 ? 'mt-2' : ''}`}>
+                                <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                                    {item.label}
+                                </p>
+                            </div>
+                        );
+                    }
+
                     const isActive = pathname.startsWith(item.href);
                     return (
                         <Link key={item.href} href={item.href}>
