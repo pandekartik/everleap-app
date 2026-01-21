@@ -98,8 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (role === "SUPER_ADMIN") {
             router.push("/admin/clients");
+        } else if (role === "ORG_ADMIN") {
+            router.push("/dashboard");
         } else {
-            router.push("/hiring");
+            router.push("/dashboard");
         }
     };
 

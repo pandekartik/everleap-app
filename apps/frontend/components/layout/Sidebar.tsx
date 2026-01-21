@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/mock-auth";
 
 const NAV_ITEMS = [
     // HR / Recruiter Views
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"] },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER", "ORG_ADMIN"] },
     { name: "Hiring", href: "/hiring", icon: Briefcase, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"] },
     { name: "Candidates", href: "/candidates", icon: Users, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"] },
     { name: "Interviews", href: "/interviews", icon: Calendar, roles: ["HR_ADMIN", "HIRING_MANAGER", "INTERVIEWER"] },

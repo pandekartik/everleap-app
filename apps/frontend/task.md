@@ -1,22 +1,22 @@
-# Task: Implement HR Admin Frontend
+# Task: Implement Org Admin & Hiring Manager Experience
 
 - [x] **1. Foundation: Auth & Roles**
-    - [x] Mock Authentication & Credential Management
     - [x] RBAC (Superadmin vs Org Admin vs HR Admin)
-    - [x] Dynamic Sidebar Navigation
 - [x] **2. Superadmin Console**
-    - [x] "Create Client" Form Dialog
-    - [x] UI Refinements (Font, Colors, Sidebar)
-- [x] **3. HR Admin Pages**
-    - [x] **Data**: Extend `mock-data.ts` with Candidates, Interviews, Offers.
-    - [x] **Dashboard** (`/dashboard`): Stats & Actions.
-    - [x] **Candidates** (`/candidates`): Global pool view.
-    - [x] **Interviews** (`/interviews`): Schedule view.
-    - [x] **Offers** (`/offers`): Management view.
-    - [x] **Onboarding** (`/onboarding`): Pipeline view.
-- [ ] **4. Job Creation Flow**
-    - [ ] Connect `CreateRoleDialog` to data.
-    - [ ] Job Detail Dashboard (`/hiring/[jobId]`).
+    - [x] Client Management & Onboarding
+- [x] **3. HR Admin Frontend**
+    - [x] Dashboard, Candidates, Interviews, Offers, Onboarding
+- [x] **4. Org Admin (IT/Ops) Frontend**
+    - [x] **Navigation**: Enable 'Dashboard' for Org Admin in Sidebar.
+    - [x] **Redirects**: Ensure Login redirects Org Admin to Dashboard.
+    - [x] **Dashboard**: Create IT-specific view (Seats, Usage, Billing status).
+    - [x] **Employees** (`/employees`): User management table.
+    - [x] **Billing** (`/billing`): Subscription plans & Invoices.
+    - [x] **Reports** (`/reports`): Usage analytics.
+    - [x] **Settings** (`/settings`): Organization details.
+- [ ] **5. Hiring Manager Experience**
+    - [ ] Verify Dashboard access and content.
+    - [ ] Ensure consistent navigation (already shared with HR Admin).
 
 # Next Priority
-Implement the **Job Creation to Dashboard** connection.
+Verify proper navigation flow for Hiring Managers and clean up loose ends.
