@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Card, CardContent, CardHeader, CardTitle, Badge } from "@everleap/design-system";
-import { Plus, Search, Filter, Download, Eye, CheckCircle, Clock, Users, TrendingUp, DollarSign, LayoutList, LayoutGrid, ChevronDown } from "lucide-react";
+import { Plus, Search, Filter, Download, Eye, CheckCircle, Clock, Users, TrendingUp, DollarSign, LayoutList, LayoutGrid, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
 import { MOCK_CANDIDATES } from "@/lib/mock-data";
 import { cn } from "@everleap/design-system/lib/utils";
 
@@ -10,6 +10,8 @@ export default function OffersPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [viewMode, setViewMode] = useState<"all" | "byJob">("all");
     const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
+    const [sortBy, setSortBy] = useState<"name" | "role" | "salary" | "sent" | "status">("sent");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
     // Filter for candidates in offer stage
     const offersData = MOCK_CANDIDATES.filter(c => c.stage === "OFFER" || c.stage === "HIRED");
@@ -29,11 +31,47 @@ export default function OffersPage() {
     const accepted = offers.filter(o => o.status === "Accepted").length;
     const acceptanceRate = totalOffers > 0 ? Math.round((accepted / totalOffers) * 100) : 0;
 
-    // Filter offers
+    // Filter and sort offers
     const filteredOffers = offers.filter(offer =>
         offer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         offer.role.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ).sort((a, b) => {
+        let comparison = 0;
+        switch (sortBy) {
+            case "name":
+                comparison = a.name.localeCompare(b.name);
+                break;
+            case "role":
+                comparison = a.role.localeCompare(b.role);
+                break;
+            case "salary":
+                comparison = parseInt(a.salary.replace(/\D/g, '')) - parseInt(b.salary.replace(/\D/g, ''));
+                break;
+            case "sent":
+                comparison = new Date(a.sentDate).getTime() - new Date(b.sentDate).getTime();
+                break;
+            case "status":
+                comparison = a.status.localeCompare(b.status);
+                break;
+        }
+        return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    const handleSort = (column: typeof sortBy) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+        } else {
+            setSortBy(column);
+            setSortOrder("asc");
+        }
+    };
+
+    const SortIcon = ({ column }: { column: typeof sortBy }) => {
+        if (sortBy !== column) return <ArrowUpDown className="ml-2 h-3.5 w-3.5 text-slate-400" />;
+        return sortOrder === "asc" ?
+            <ChevronUp className="ml-2 h-3.5 w-3.5 text-primary" /> :
+            <ChevronDown className="ml-2 h-3.5 w-3.5 text-primary" />;
+    };
 
     // Group offers by role
     const offersByJob = filteredOffers.reduce((acc, offer) => {
@@ -161,12 +199,22 @@ export default function OffersPage() {
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow className="border-slate-100 hover:bg-slate-50/50">
-                                <TableHead>Candidate</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Offer Amount</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("name")}>
+                                    <div className="flex items-center">Candidate<SortIcon column="name" /></div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("role")}>
+                                    <div className="flex items-center">Role<SortIcon column="role" /></div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("salary")}>
+                                    <div className="flex items-center">Offer Amount<SortIcon column="salary" /></div>
+                                </TableHead>
                                 <TableHead>Equity</TableHead>
-                                <TableHead>Sent Date</TableHead>
-                                <TableHead>Status</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("sent")}>
+                                    <div className="flex items-center">Sent Date<SortIcon column="sent" /></div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+                                    <div className="flex items-center">Status<SortIcon column="status" /></div>
+                                </TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -211,7 +259,7 @@ export default function OffersPage() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -316,7 +364,7 @@ export default function OffersPage() {
                                                             )}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="flex items-center justify-end gap-1">
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
                                                                     <Eye className="h-4 w-4" />
                                                                 </Button>

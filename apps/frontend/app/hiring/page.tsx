@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@everleap/design-system";
-import { Search, Filter, Download, Eye, Edit, Briefcase, Users, Clock, TrendingUp, Plus } from "lucide-react";
+import { Search, Filter, Download, Eye, Edit, Briefcase, Users, Clock, TrendingUp, Plus, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
 import { StatusBadge } from "@/components/hiring/StatusBadge";
 import { MOCK_ROLES } from "@/lib/mock-data";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,8 @@ export default function HiringPage() {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [sortBy, setSortBy] = useState<"id" | "title" | "department" | "location" | "date" | "status">("date");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
     // Calculate stats
     const totalJobs = MOCK_ROLES.length;
@@ -19,14 +21,53 @@ export default function HiringPage() {
     const totalCandidates = MOCK_ROLES.reduce((sum, job) => sum + job.candidateCount, 0);
     const avgTimeToHire = 18; // Mock value
 
-    // Filter jobs
+    // Filter and sort jobs
     const filteredJobs = MOCK_ROLES.filter(job => {
         const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
             job.location.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === "all" || job.status === statusFilter;
         return matchesSearch && matchesStatus;
+    }).sort((a, b) => {
+        let comparison = 0;
+        switch (sortBy) {
+            case "id":
+                comparison = a.id.localeCompare(b.id);
+                break;
+            case "title":
+                comparison = a.title.localeCompare(b.title);
+                break;
+            case "department":
+                comparison = a.department.localeCompare(b.department);
+                break;
+            case "location":
+                comparison = a.location.localeCompare(b.location);
+                break;
+            case "date":
+                comparison = new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime();
+                break;
+            case "status":
+                comparison = a.status.localeCompare(b.status);
+                break;
+        }
+        return sortOrder === "asc" ? comparison : -comparison;
     });
+
+    const handleSort = (column: typeof sortBy) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+        } else {
+            setSortBy(column);
+            setSortOrder("asc");
+        }
+    };
+
+    const SortIcon = ({ column }: { column: typeof sortBy }) => {
+        if (sortBy !== column) return <ArrowUpDown className="ml-2 h-3.5 w-3.5 text-slate-400" />;
+        return sortOrder === "asc" ?
+            <ChevronUp className="ml-2 h-3.5 w-3.5 text-primary" /> :
+            <ChevronDown className="ml-2 h-3.5 w-3.5 text-primary" />;
+    };
 
     return (
         <div className="space-y-6">
@@ -118,13 +159,25 @@ export default function HiringPage() {
                 <Table>
                     <TableHeader className="bg-slate-50/50">
                         <TableRow className="border-slate-100 hover:bg-slate-50/50">
-                            <TableHead className="w-[100px]">Job ID</TableHead>
-                            <TableHead className="w-[250px]">Position</TableHead>
-                            <TableHead>Department</TableHead>
-                            <TableHead>Location</TableHead>
-                            <TableHead>Created</TableHead>
+                            <TableHead className="w-[100px] cursor-pointer" onClick={() => handleSort("id")}>
+                                <div className="flex items-center">Job ID<SortIcon column="id" /></div>
+                            </TableHead>
+                            <TableHead className="w-[250px] cursor-pointer" onClick={() => handleSort("title")}>
+                                <div className="flex items-center">Position<SortIcon column="title" /></div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("department")}>
+                                <div className="flex items-center">Department<SortIcon column="department" /></div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("location")}>
+                                <div className="flex items-center">Location<SortIcon column="location" /></div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("date")}>
+                                <div className="flex items-center">Created<SortIcon column="date" /></div>
+                            </TableHead>
                             <TableHead className="text-center">Candidates</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+                                <div className="flex items-center">Status<SortIcon column="status" /></div>
+                            </TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -161,7 +214,7 @@ export default function HiringPage() {
                                         <StatusBadge status={job.status} />
                                     </TableCell>
                                     <TableCell>
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-1">
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
                                                 <Eye className="h-4 w-4" />
                                             </Button>

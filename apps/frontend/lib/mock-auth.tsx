@@ -104,9 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("everleap_demo_user", JSON.stringify(demoUser));
 
         if (role === "SUPER_ADMIN") {
-            router.push("/admin/clients");
+            router.push("/platform-dashboard");
         } else if (role === "CANDIDATE") {
-            router.push("/candidate/dashboard");
+            router.push("/my-applications");
         } else if (role === "ORG_ADMIN") {
             router.push("/dashboard");
         } else {

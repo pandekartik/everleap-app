@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge, Card, CardContent, CardHeader, CardTitle } from "@everleap/design-system";
-import { Search, Filter, Download, MessageSquare, Calendar, Users, TrendingUp, Clock, Target, LayoutList, LayoutGrid, ChevronDown } from "lucide-react";
+import { Search, Filter, Download, MessageSquare, Calendar, Users, TrendingUp, Clock, Target, LayoutList, LayoutGrid, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
 import { MOCK_CANDIDATES, CandidateStatus } from "@/lib/mock-data";
 import { cn } from "@everleap/design-system/lib/utils";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,8 @@ export default function CandidatesPage() {
     const [stageFilter, setStageFilter] = useState("all");
     const [viewMode, setViewMode] = useState<"all" | "byJob">("all");
     const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
+    const [sortBy, setSortBy] = useState<"name" | "role" | "stage" | "score" | "applied">("applied");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
     // Calculate stats
     const totalCandidates = MOCK_CANDIDATES.length;
@@ -20,14 +22,50 @@ export default function CandidatesPage() {
     const avgScore = Math.round(MOCK_CANDIDATES.reduce((sum, c) => sum + c.score, 0) / totalCandidates);
     const topMatches = MOCK_CANDIDATES.filter(c => c.score >= 90).length;
 
-    // Filter candidates
+    // Filter and sort candidates
     const filteredCandidates = MOCK_CANDIDATES.filter(candidate => {
         const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             candidate.role.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStage = stageFilter === "all" || candidate.stage === stageFilter;
         return matchesSearch && matchesStage;
+    }).sort((a, b) => {
+        let comparison = 0;
+        switch (sortBy) {
+            case "name":
+                comparison = a.name.localeCompare(b.name);
+                break;
+            case "role":
+                comparison = a.role.localeCompare(b.role);
+                break;
+            case "stage":
+                comparison = a.stage.localeCompare(b.stage);
+                break;
+            case "score":
+                comparison = a.score - b.score;
+                break;
+            case "applied":
+                comparison = new Date(a.appliedDate).getTime() - new Date(b.appliedDate).getTime();
+                break;
+        }
+        return sortOrder === "asc" ? comparison : -comparison;
     });
+
+    const handleSort = (column: typeof sortBy) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+        } else {
+            setSortBy(column);
+            setSortOrder("asc");
+        }
+    };
+
+    const SortIcon = ({ column }: { column: typeof sortBy }) => {
+        if (sortBy !== column) return <ArrowUpDown className="ml-2 h-3.5 w-3.5 text-slate-400" />;
+        return sortOrder === "asc" ?
+            <ChevronUp className="ml-2 h-3.5 w-3.5 text-primary" /> :
+            <ChevronDown className="ml-2 h-3.5 w-3.5 text-primary" />;
+    };
 
     // Group candidates by role
     const candidatesByJob = filteredCandidates.reduce((acc, candidate) => {
@@ -168,11 +206,21 @@ export default function CandidatesPage() {
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow className="border-slate-100 hover:bg-slate-50/50">
-                                <TableHead className="w-[300px]">Candidate</TableHead>
-                                <TableHead>Role Applied</TableHead>
-                                <TableHead>Stage</TableHead>
-                                <TableHead>Match Score</TableHead>
-                                <TableHead>Applied Date</TableHead>
+                                <TableHead className="w-[300px] cursor-pointer" onClick={() => handleSort("name")}>
+                                    <div className="flex items-center">Candidate<SortIcon column="name" /></div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("role")}>
+                                    <div className="flex items-center">Role Applied<SortIcon column="role" /></div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("stage")}>
+                                    <div className="flex items-center">Stage<SortIcon column="stage" /></div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("score")}>
+                                    <div className="flex items-center">Match Score<SortIcon column="score" /></div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => handleSort("applied")}>
+                                    <div className="flex items-center">Applied Date<SortIcon column="applied" /></div>
+                                </TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -220,7 +268,7 @@ export default function CandidatesPage() {
                                         </TableCell>
                                         <TableCell className="text-slate-600 text-sm">{candidate.appliedDate}</TableCell>
                                         <TableCell>
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
                                                     <MessageSquare className="h-4 w-4" />
                                                 </Button>

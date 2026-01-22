@@ -31,10 +31,21 @@ const NAV_ITEMS = [
     { name: "Interviews", href: "/interviews", icon: Calendar, roles: ["HR_ADMIN", "INTERVIEWER"], section: "pipeline" },
     { name: "Offers", href: "/offers", icon: FileSignature, roles: ["HR_ADMIN"], section: "pipeline" },
 
+    // PLATFORM ADMIN
+    { type: "divider", section: "platform", label: "PLATFORM", roles: ["SUPER_ADMIN"] },
+    { name: "Dashboard", href: "/platform-dashboard", icon: LayoutDashboard, roles: ["SUPER_ADMIN"], section: "platform" },
+    { name: "Clients", href: "/clients", icon: Building2, roles: ["SUPER_ADMIN"], section: "platform" },
+    { name: "System Health", href: "/system", icon: BarChart3, roles: ["SUPER_ADMIN"], section: "platform" },
+
+    // BILLING & PLANS
+    { type: "divider", section: "billing", label: "BILLING & PLANS", roles: ["SUPER_ADMIN"] },
+    { name: "Plans", href: "/plans", icon: FileSignature, roles: ["SUPER_ADMIN"], section: "billing" },
+    { name: "Coupons", href: "/coupons", icon: FileSignature, roles: ["SUPER_ADMIN"], section: "billing" },
+
     // CANDIDATE NAVIGATION
     { type: "divider", section: "candidate", label: "MY APPLICATIONS", roles: ["CANDIDATE"] },
-    { name: "Dashboard", href: "/candidate/dashboard", icon: LayoutDashboard, roles: ["CANDIDATE"], section: "candidate" },
-    { name: "My Profile", href: "/candidate/profile", icon: Users, roles: ["CANDIDATE"], section: "candidate" },
+    { name: "My Applications", href: "/my-applications", icon: LayoutDashboard, roles: ["CANDIDATE"], section: "candidate" },
+    { name: "Profile", href: "/profile", icon: Users, roles: ["CANDIDATE"], section: "candidate" },
 
     // SETTINGS
     { type: "divider", section: "settings", label: "SETTINGS", roles: ["HR_ADMIN", "ORG_ADMIN"] },
@@ -71,7 +82,11 @@ export function Sidebar() {
         <div className="w-64 border-r border-slate-100 h-screen bg-card flex flex-col fixed left-0 top-0 z-50">
             {/* Header */}
             <div className="h-16 flex items-center px-6 border-b border-slate-100">
-                <Link href={userRole === "CANDIDATE" ? "/candidate/dashboard" : "/dashboard"} className="flex items-center gap-2">
+                <Link href={
+                    userRole === "SUPER_ADMIN" ? "/admin/dashboard" :
+                        userRole === "CANDIDATE" ? "/candidate/dashboard" :
+                            "/dashboard"
+                } className="flex items-center gap-2">
                     <img src="/Logo.svg" alt="Everleap" className="h-6 w-auto" />
                 </Link>
             </div>

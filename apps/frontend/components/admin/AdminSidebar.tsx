@@ -6,20 +6,24 @@ import { useAuth } from "@/lib/mock-auth";
 import { cn } from "@everleap/design-system/lib/utils";
 import {
     LayoutDashboard,
-    Users,
-    Settings,
     Building2,
-    Activity,
+    BarChart3,
+    FileSignature,
     LogOut
 } from "lucide-react";
 import { Button } from "@everleap/design-system";
 
 const ADMIN_NAV_ITEMS = [
-    { name: "Overview", href: "/admin", icon: LayoutDashboard },
+    // PLATFORM
+    { type: "divider", label: "PLATFORM" },
+    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Clients", href: "/admin/clients", icon: Building2 },
-    { name: "Platform Jobs", href: "/admin/jobs", icon: Activity },
-    { name: "Users", href: "/admin/users", icon: Users },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+    { name: "System Health", href: "/admin/system", icon: BarChart3 },
+
+    // BILLING & PLANS
+    { type: "divider", label: "BILLING & PLANS" },
+    { name: "Plans", href: "/admin/plans", icon: FileSignature },
+    { name: "Coupons", href: "/admin/coupons", icon: FileSignature },
 ];
 
 export function AdminSidebar() {
@@ -30,18 +34,25 @@ export function AdminSidebar() {
         <div className="w-64 border-r border-slate-100 bg-card flex flex-col fixed left-0 top-0 z-50 h-screen">
             {/* Header */}
             <div className="h-16 flex items-center px-6 border-b border-slate-100">
-                <Link href="/admin" className="flex items-center gap-2">
+                <Link href="/admin/dashboard" className="flex items-center gap-2">
                     <img src="/Logo.svg" alt="Everleap" className="h-6 w-auto" />
                 </Link>
             </div>
 
             {/* Navigation */}
-            <div className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-                {ADMIN_NAV_ITEMS.map((item) => {
-                    // Fix: treat root "/admin" strictly, others as prefixes
-                    const isActive = item.href === "/admin"
-                        ? pathname === "/admin"
-                        : pathname.startsWith(item.href);
+            <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+                {ADMIN_NAV_ITEMS.map((item, index) => {
+                    if (item.type === "divider") {
+                        return (
+                            <div key={`divider-${index}`} className={`px-3 pt-4 pb-2 ${index > 0 ? 'mt-2' : ''}`}>
+                                <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                                    {item.label}
+                                </p>
+                            </div>
+                        );
+                    }
+
+                    const isActive = pathname.startsWith(item.href);
 
                     return (
                         <Link key={item.href} href={item.href}>

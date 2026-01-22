@@ -205,7 +205,7 @@ export default function ApplyJobPage() {
                                 jobId={jobId}
                                 onSubmit={(data) => {
                                     console.log("Application submitted:", data);
-                                    router.push("/candidate/dashboard");
+                                    router.push("/my-applications");
                                 }}
                             />
                         )}
