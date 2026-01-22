@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export type UserRole = "SUPER_ADMIN" | "ORG_ADMIN" | "HR_ADMIN" | "HIRING_MANAGER" | "RECRUITER" | "INTERVIEWER";
+export type UserRole = "SUPER_ADMIN" | "ORG_ADMIN" | "HR_ADMIN" | "HIRING_MANAGER" | "RECRUITER" | "INTERVIEWER" | "CANDIDATE";
 
 export interface User {
     id: string;
@@ -70,6 +70,13 @@ export const DEMO_USERS: Record<UserRole, User> = {
         role: "INTERVIEWER",
         avatarUrl: "https://i.pravatar.cc/150?u=ian",
         orgId: "org_acme"
+    },
+    CANDIDATE: {
+        id: "usr_candidate_01",
+        name: "Sarah Chen",
+        email: "sarah.chen@email.com",
+        role: "CANDIDATE",
+        avatarUrl: "https://i.pravatar.cc/150?u=sarahchen"
     }
 };
 
@@ -98,6 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (role === "SUPER_ADMIN") {
             router.push("/admin/clients");
+        } else if (role === "CANDIDATE") {
+            router.push("/candidate/dashboard");
         } else if (role === "ORG_ADMIN") {
             router.push("/dashboard");
         } else {

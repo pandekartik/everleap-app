@@ -66,12 +66,18 @@ export default function LoginPage() {
                                     icon={<Users className="h-5 w-5" />}
                                     onClick={() => login("HR_ADMIN")}
                                 />
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Job Candidates</p>
+                            <div className="space-y-3">
                                 <DemoRoleButton
-                                    role="HIRING_MANAGER"
-                                    title="Hiring Manager"
-                                    desc="Create roles, review candidates"
-                                    icon={<Users className="h-5 w-5" />}
-                                    onClick={() => login("HIRING_MANAGER")}
+                                    role="CANDIDATE"
+                                    title="Candidate"
+                                    desc="Apply to jobs, track applications"
+                                    icon={<User className="h-5 w-5" />}
+                                    onClick={() => login("CANDIDATE")}
                                 />
                             </div>
                         </div>

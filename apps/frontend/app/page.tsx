@@ -53,7 +53,8 @@ export default function LandingPage() {
                                 "Compliance notes and hiring constraints"
                             ],
                             icon: "FileText",
-                            placeholderLabel: "Job Requisition Form"
+                            placeholderLabel: "Job Requisition Form",
+                            screenshot: "/screenshots/job-creation-form.png"
                         },
                         {
                             id: "step-2",
@@ -66,7 +67,8 @@ export default function LandingPage() {
                                 "Edit and approve before publishing"
                             ],
                             icon: "Sparkles",
-                            placeholderLabel: "AI-Generated Job Description"
+                            placeholderLabel: "AI-Generated Job Description",
+                            screenshot: "/screenshots/ai-generated-jd.png"
                         },
                         {
                             id: "step-3",
@@ -79,7 +81,8 @@ export default function LandingPage() {
                                 "Real-time posting status tracking"
                             ],
                             icon: "Globe",
-                            placeholderLabel: "Job Publishing Dashboard"
+                            placeholderLabel: "Job Publishing Dashboard",
+                            screenshot: "/screenshots/job-publishing-success.png"
                         },
                         {
                             id: "step-4",
@@ -109,8 +112,20 @@ export default function LandingPage() {
                         />
 
                         <div className="grid md:grid-cols-2 gap-8 mb-12">
-                            <PlaceholderBox icon="Users" label="Candidate List with AI Scores" className="bg-slate-800 border-slate-700" />
-                            <PlaceholderBox icon="FileText" label="Candidate Detail with AI Analysis" className="bg-slate-800 border-slate-700" />
+                            <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-xl">
+                                <img
+                                    src="/screenshots/candidate-list.png"
+                                    alt="Candidate List with AI Scores"
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-xl">
+                                <img
+                                    src="/screenshots/candidate-detail-ai.png"
+                                    alt="Candidate Detail with AI Analysis"
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
                         </div>
                     </div>
                 </section>

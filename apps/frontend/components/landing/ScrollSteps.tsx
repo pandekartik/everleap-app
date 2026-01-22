@@ -40,6 +40,7 @@ interface Step {
     checklist: string[];
     icon: string; // Changed from LucideIcon to string key
     placeholderLabel: string;
+    screenshot?: string; // Optional path to actual screenshot
 }
 
 interface ScrollStepperProps {
@@ -156,13 +157,23 @@ export function ScrollStepper({ steps, id }: ScrollStepperProps) {
                                             : "opacity-0 translate-y-10 scale-95"
                                         }`}
                                 >
-                                    <div className="w-full h-full bg-white rounded-2xl border border-slate-100 shadow-lg flex items-center justify-center">
-                                        <div className="text-center text-slate-400">
-                                            <StepIcon weight="duotone" className="h-16 w-16 mx-auto mb-6 text-teal-500 opacity-80" />
-                                            <p className="text-lg font-semibold text-slate-600 mb-2">{step.placeholderLabel}</p>
-                                            <p className="text-sm text-slate-400 uppercase tracking-widest">Live Preview</p>
+                                    {step.screenshot ? (
+                                        <div className="w-full h-full rounded-2xl overflow-hidden shadow-lg">
+                                            <img
+                                                src={step.screenshot}
+                                                alt={step.placeholderLabel}
+                                                className="w-full h-full object-cover object-top"
+                                            />
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="w-full h-full bg-white rounded-2xl border border-slate-100 shadow-lg flex items-center justify-center">
+                                            <div className="text-center text-slate-400">
+                                                <StepIcon weight="duotone" className="h-16 w-16 mx-auto mb-6 text-teal-500 opacity-80" />
+                                                <p className="text-lg font-semibold text-slate-600 mb-2">{step.placeholderLabel}</p>
+                                                <p className="text-sm text-slate-400 uppercase tracking-widest">Live Preview</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })}

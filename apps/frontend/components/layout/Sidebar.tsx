@@ -8,7 +8,6 @@ import {
     Users,
     Calendar,
     FileSignature,
-    Rocket,
     Building2,
     BarChart3,
     Settings,
@@ -20,18 +19,22 @@ import { useAuth } from "@/lib/mock-auth";
 
 const NAV_ITEMS = [
     // COMMAND CENTER
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER", "ORG_ADMIN"], section: "command" },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["HR_ADMIN", "RECRUITER", "ORG_ADMIN"], section: "command" },
 
     // HIRING EXECUTION
-    { type: "divider", section: "hiring", label: "HIRING", roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"] },
-    { name: "Jobs", href: "/hiring", icon: Briefcase, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"], section: "hiring" },
-    { name: "Candidates", href: "/candidates", icon: Users, roles: ["HR_ADMIN", "HIRING_MANAGER", "RECRUITER"], section: "hiring" },
+    { type: "divider", section: "hiring", label: "HIRING", roles: ["HR_ADMIN", "RECRUITER"] },
+    { name: "Jobs", href: "/hiring", icon: Briefcase, roles: ["HR_ADMIN", "RECRUITER"], section: "hiring" },
+    { name: "Candidates", href: "/candidates", icon: Users, roles: ["HR_ADMIN", "RECRUITER"], section: "hiring" },
 
     // PIPELINE
-    { type: "divider", section: "pipeline", label: "PIPELINE", roles: ["HR_ADMIN", "HIRING_MANAGER", "INTERVIEWER"] },
-    { name: "Interviews", href: "/interviews", icon: Calendar, roles: ["HR_ADMIN", "HIRING_MANAGER", "INTERVIEWER"], section: "pipeline" },
+    { type: "divider", section: "pipeline", label: "PIPELINE", roles: ["HR_ADMIN", "INTERVIEWER"] },
+    { name: "Interviews", href: "/interviews", icon: Calendar, roles: ["HR_ADMIN", "INTERVIEWER"], section: "pipeline" },
     { name: "Offers", href: "/offers", icon: FileSignature, roles: ["HR_ADMIN"], section: "pipeline" },
-    { name: "Onboarding", href: "/onboarding", icon: Rocket, roles: ["HR_ADMIN", "HIRING_MANAGER"], section: "pipeline" },
+
+    // CANDIDATE NAVIGATION
+    { type: "divider", section: "candidate", label: "MY APPLICATIONS", roles: ["CANDIDATE"] },
+    { name: "Dashboard", href: "/candidate/dashboard", icon: LayoutDashboard, roles: ["CANDIDATE"], section: "candidate" },
+    { name: "My Profile", href: "/candidate/profile", icon: Users, roles: ["CANDIDATE"], section: "candidate" },
 
     // SETTINGS
     { type: "divider", section: "settings", label: "SETTINGS", roles: ["HR_ADMIN", "ORG_ADMIN"] },
@@ -68,7 +71,7 @@ export function Sidebar() {
         <div className="w-64 border-r border-slate-100 h-screen bg-card flex flex-col fixed left-0 top-0 z-50">
             {/* Header */}
             <div className="h-16 flex items-center px-6 border-b border-slate-100">
-                <Link href="/dashboard" className="flex items-center gap-2">
+                <Link href={userRole === "CANDIDATE" ? "/candidate/dashboard" : "/dashboard"} className="flex items-center gap-2">
                     <img src="/Logo.svg" alt="Everleap" className="h-6 w-auto" />
                 </Link>
             </div>
