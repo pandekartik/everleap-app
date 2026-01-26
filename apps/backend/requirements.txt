@@ -1,0 +1,78 @@
+# Core Framework
+fastapi
+uvicorn
+python-multipart
+
+# Database
+sqlalchemy
+asyncpg
+psycopg2-binary
+alembic
+
+# Authentication & Security
+python-jose[cryptography]
+passlib[bcrypt]
+python-decouple
+pydantic[email]
+pydantic-settings
+argon2-cffi
+
+# Task Queue & Caching
+celery
+redis
+kombu
+
+# Cloud Storage
+google-cloud-storage
+google-auth
+
+# Email
+aiosmtplib
+email-validator==2.1.0.post1
+
+# HTTP Client
+httpx
+aiohttp
+
+# Data Validation & Serialization
+pydantic
+python-dateutil
+
+# AI/LLM - Groq API
+groq
+
+# LangGraph for Agent Workflows
+langgraph
+langchain-core
+langchain-community
+
+# PDF Processing for Resume Extraction
+pypdf
+pdfplumber
+pymupdf
+pytesseract
+pdf2image
+pillow
+
+# OCR and Text Extraction (multilingual-pdf2text alternative)
+easyocr
+multilingual-pdf2text
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+
+# Development
+black
+flake8
+mypy
+pre-commit
+
+# Monitoring & Logging
+python-json-logger
+sentry-sdk
+
+# Utilities
+python-slugify
+pytz
