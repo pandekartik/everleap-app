@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { Button, Input, Label } from "@everleap/design-system";
 import { useAuth } from "@/lib/auth";
 import { ShieldCheck, Users, Eye, EyeOff } from "lucide-react";
@@ -135,9 +137,9 @@ export default function LoginPage() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <Label htmlFor="password">Password</Label>
-                                <button type="button" className="text-xs text-primary hover:underline font-medium">
+                                <Link href="/forgot-password" className="text-xs text-primary hover:underline font-medium">
                                     Forgot password?
-                                </button>
+                                </Link>
                             </div>
                             <div className="relative">
                                 <Input

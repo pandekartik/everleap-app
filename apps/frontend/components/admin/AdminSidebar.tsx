@@ -11,7 +11,11 @@ import {
     FileSignature,
     LogOut
 } from "lucide-react";
-import { Button } from "@everleap/design-system";
+import {
+    Button,
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
+} from "@everleap/design-system";
+import { useState } from "react";
 
 const ADMIN_NAV_ITEMS = [
     // PLATFORM
@@ -29,6 +33,7 @@ const ADMIN_NAV_ITEMS = [
 export function AdminSidebar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
+    const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
     return (
         <div className="w-64 border-r border-slate-100 bg-card flex flex-col fixed left-0 top-0 z-50 h-screen">
@@ -92,11 +97,26 @@ export function AdminSidebar() {
                         <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-700" onClick={logout}>
+                <Button variant="outline" size="sm" className="w-full text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-700" onClick={() => setShowLogoutDialog(true)}>
                     <LogOut className="mr-2 h-3 w-3" />
                     Sign out
                 </Button>
             </div>
-        </div>
+
+            <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Sign out</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to sign out?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowLogoutDialog(false)}>Cancel</Button>
+                        <Button onClick={logout}>Sign out</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 }

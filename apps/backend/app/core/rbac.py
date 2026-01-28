@@ -235,10 +235,11 @@ def check_company_access(user: CurrentUser, company_id: UUID) -> None:
     if user.is_super_admin:
         return
     
-    if user.company_id != company_id:
+    # Compare as strings to handle UUID vs str discrepancies
+    if str(user.company_id) != str(company_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. You can only access your own company."
+            detail=f"Access denied. You can only access your own company. {user.company_id} vs {company_id}"
         )
 
 

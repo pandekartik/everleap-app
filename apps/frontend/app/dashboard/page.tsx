@@ -11,13 +11,51 @@ import {
     CheckCircle2,
     Clock,
     AlertCircle,
-    Plus
+    Plus,
+    BarChart3
 } from "lucide-react";
 import Link from "next/link";
+import { api } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
     const { user } = useAuth();
     const firstName = user?.full_name?.split(" ")[0] || "User";
+
+    // State for dashboard metrics
+    const [metrics, setMetrics] = useState<any>(null);
+    const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+    useEffect(() => {
+        const fetchMetrics = async () => {
+            if (user?.roles.includes("ORG_ADMIN") && user?.company_id) {
+                try {
+                    const { data } = await api.get(`/companies/${user.company_id}/dashboard`);
+                    setMetrics(data);
+                } catch (error) {
+                    console.error("Failed to fetch dashboard metrics", error);
+                } finally {
+                    setLoadingMetrics(false);
+                }
+            }
+        };
+        fetchMetrics();
+    }, [user]);
+
+    // Format currency
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 0
+        }).format(amount);
+    };
+
+    // Format bytes to GB
+    const formatStorage = (bytes: number) => {
+        const gb = bytes / (1024 * 1024 * 1024);
+        return `${gb.toFixed(1)} GB`;
+    };
 
     return (
         <div className="space-y-8">
@@ -56,31 +94,31 @@ export default function DashboardPage() {
                 <div className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-4">
                         <MetricCard
-                            title="Active Users"
-                            value="42"
-                            trend="+3 this month"
+                            title="Total Employees"
+                            value={loadingMetrics ? "-" : metrics?.total_employees || 0}
+                            trend="Active users"
                             icon={Users}
                             trendColor="text-emerald-600"
                         />
                         <MetricCard
-                            title="Storage Used"
-                            value="128 GB"
-                            trend="45% of 500GB"
+                            title="Active Jobs"
+                            value={loadingMetrics ? "-" : metrics?.total_jobs || 0}
+                            trend={`${metrics?.total_applications || 0} applications`}
                             icon={Briefcase}
-                            trendColor="text-slate-600"
-                        />
-                        <MetricCard
-                            title="API Credits"
-                            value="8,400"
-                            trend="Renews in 12 days"
-                            icon={TrendingUp}
                             trendColor="text-blue-600"
                         />
                         <MetricCard
-                            title="Next Invoice"
-                            value="$299"
-                            trend="Due on Oct 1"
-                            icon={Calendar}
+                            title="API Credits"
+                            value={loadingMetrics ? "-" : (metrics?.api_credits_used || 0).toLocaleString()}
+                            trend={`of ${(metrics?.api_credits_limit || 0).toLocaleString()} limit`}
+                            icon={TrendingUp}
+                            trendColor="text-slate-600"
+                        />
+                        <MetricCard
+                            title="Storage Used"
+                            value={loadingMetrics ? "-" : formatStorage(metrics?.total_storage_used || 0)}
+                            trend="Cloud assets"
+                            icon={BarChart3} // Changed from Calendar to represent storage better if needed, or stick to Briefcase
                             trendColor="text-slate-600"
                         />
                     </div>

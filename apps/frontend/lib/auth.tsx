@@ -23,6 +23,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     logout: () => void;
     registerCandidate: (data: any) => Promise<void>;
+    requestPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -104,6 +105,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
+    const requestPasswordReset = async (email: string) => {
+        try {
+            await api.post("/auth/request-password-reset", { email });
+            toast.success("If an account exists with this email, you will receive a password reset link.");
+        } catch (error: any) {
+            console.error("Password reset request failed", error);
+            // We should still populate success message or generic error to prevent enumeration, 
+            // but for now let's just log and show a safe message or the detail if valid.
+            // The backend returns success even if email not found, so this catch block implies network/server error.
+            const message = error.response?.data?.detail || "Failed to send reset request.";
+            toast.error(message);
+            throw error;
+        }
+    };
+
     const logout = async () => {
         try {
             const refreshToken = localStorage.getItem("everleap_refresh_token");
@@ -122,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, logout, registerCandidate }}>
+        <AuthContext.Provider value={{ user, isLoading, login, logout, registerCandidate, requestPasswordReset }}>
             {children}
         </AuthContext.Provider>
     );
