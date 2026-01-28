@@ -32,8 +32,9 @@ export default function EmailPreviewPage() {
         });
 
         // Clean up simplejinja-like conditional blocks if any remnants (basic cleanup)
-        content = content.replace(/{%\s*if\s+\w+\s*%}(.*?){%\s*else\s*%}(.*?){%\s*endif\s*%}/gs, '$1');
-        content = content.replace(/{%\s*if\s+\w+\s*%}(.*?){%\s*endif\s*%}/gs, '$1');
+        // using [\s\S] instead of . with s flag for broader compatibility
+        content = content.replace(/{%\s*if\s+\w+\s*%}([\s\S]*?){%\s*else\s*%}([\s\S]*?){%\s*endif\s*%}/g, '$1');
+        content = content.replace(/{%\s*if\s+\w+\s*%}([\s\S]*?){%\s*endif\s*%}/g, '$1');
 
         return content;
     };
