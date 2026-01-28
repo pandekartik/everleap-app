@@ -82,8 +82,9 @@ export function CreateClientDialog({ onSuccess }: CreateClientDialogProps) {
             if (onSuccess) onSuccess();
         } catch (error: any) {
             console.error(error);
-            toast.error("Failed to create organization", {
-                description: error.response?.data?.detail || "An unexpected error occurred"
+            toast.error("Failed to create organization");
+            form.setError("root", {
+                message: error.response?.data?.detail || "An unexpected error occurred. Please try again."
             });
         } finally {
             setIsSubmitting(false);
@@ -173,6 +174,12 @@ export function CreateClientDialog({ onSuccess }: CreateClientDialogProps) {
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {form.formState.errors.root && (
+                        <div className="p-3 rounded-md bg-red-50 border border-red-200 text-sm text-red-600">
+                            {form.formState.errors.root.message}
+                        </div>
+                    )}
 
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>

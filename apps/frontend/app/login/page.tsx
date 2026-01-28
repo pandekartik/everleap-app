@@ -29,18 +29,23 @@ export default function LoginPage() {
     const [regName, setRegName] = useState("");
     const [regPhone, setRegPhone] = useState("");
 
+    const [validationError, setValidationError] = useState<string | null>(null);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError(null);
+
         if (!email || !password) {
-            toast.error("Please enter both email and password");
+            setValidationError("Please enter both email and password");
             return;
         }
 
         setIsLoading(true);
         try {
             await login(email, password);
-        } catch (error) {
-            // Error is handled in AuthProvider
+        } catch (error: any) {
+            // Error is handled in AuthProvider but re-thrown
+            setValidationError(error.response?.data?.detail || "Invalid email or password");
         } finally {
             setIsLoading(false);
         }
@@ -146,6 +151,12 @@ export default function LoginPage() {
                         >
                             {isLoading ? "Signing in..." : "Sign in"}
                         </Button>
+
+                        {validationError && (
+                            <div className="p-3 rounded-md bg-red-50 border border-red-200 text-sm text-red-600">
+                                {validationError}
+                            </div>
+                        )}
 
                         <div className="relative my-6">
                             <div className="absolute inset-0 flex items-center">
