@@ -2,83 +2,29 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "./api";
+import { toast } from "sonner";
 
 export type UserRole = "SUPER_ADMIN" | "ORG_ADMIN" | "HR_ADMIN" | "HIRING_MANAGER" | "RECRUITER" | "INTERVIEWER" | "CANDIDATE";
 
 export interface User {
     id: string;
-    name: string;
     email: string;
-    role: UserRole;
-    avatarUrl?: string;
-    orgId?: string; // Optional for Superadmin, required for Org users
+    full_name: string;
+    phone?: string;
+    roles: UserRole[];
+    company_id?: string;
 }
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    login: (role: UserRole) => void;
+    login: (email: string, password: string) => Promise<void>;
     logout: () => void;
+    registerCandidate: (data: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const DEMO_USERS: Record<UserRole, User> = {
-    SUPER_ADMIN: {
-        id: "usr_super_01",
-        name: "Kartik (Founder)",
-        email: "kartik@everleap.ai",
-        role: "SUPER_ADMIN",
-        avatarUrl: "https://i.pravatar.cc/150?u=kartik"
-    },
-    ORG_ADMIN: {
-        id: "usr_org_admin_01",
-        name: "Steve IT (Org Owner)",
-        email: "steve@acme.inc",
-        role: "ORG_ADMIN",
-        avatarUrl: "https://i.pravatar.cc/150?u=steve",
-        orgId: "org_acme"
-    },
-    HR_ADMIN: {
-        id: "usr_hr_admin_01",
-        name: "Sarah Head of Talent",
-        email: "sarah@acme.inc",
-        role: "HR_ADMIN",
-        avatarUrl: "https://i.pravatar.cc/150?u=sarah",
-        orgId: "org_acme"
-    },
-    HIRING_MANAGER: {
-        id: "usr_manager_01",
-        name: "Mike Manager",
-        email: "mike@acme.inc",
-        role: "HIRING_MANAGER",
-        avatarUrl: "https://i.pravatar.cc/150?u=mike",
-        orgId: "org_acme"
-    },
-    RECRUITER: {
-        id: "usr_recruiter_01",
-        name: "Rachel Recruiter",
-        email: "rachel@acme.inc",
-        role: "RECRUITER",
-        avatarUrl: "https://i.pravatar.cc/150?u=rachel",
-        orgId: "org_acme"
-    },
-    INTERVIEWER: {
-        id: "usr_interviewer_01",
-        name: "Ian Interviewer",
-        email: "ian@acme.inc",
-        role: "INTERVIEWER",
-        avatarUrl: "https://i.pravatar.cc/150?u=ian",
-        orgId: "org_acme"
-    },
-    CANDIDATE: {
-        id: "usr_candidate_01",
-        name: "Sarah Chen",
-        email: "sarah.chen@email.com",
-        role: "CANDIDATE",
-        avatarUrl: "https://i.pravatar.cc/150?u=sarahchen"
-    }
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -86,42 +32,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Hydrate from local storage
-        const stored = localStorage.getItem("everleap_demo_user");
-        if (stored) {
-            try {
-                setUser(JSON.parse(stored));
-            } catch (e) {
-                console.error("Failed to parse auth user", e);
+        const initAuth = async () => {
+            const token = localStorage.getItem("everleap_access_token");
+            if (token) {
+                try {
+                    const { data } = await api.get("/auth/me");
+                    setUser(data);
+                } catch (error) {
+                    console.error("Failed to fetch user", error);
+                    localStorage.removeItem("everleap_access_token");
+                    localStorage.removeItem("everleap_refresh_token");
+                }
             }
-        }
-        setIsLoading(false);
+            setIsLoading(false);
+        };
+        initAuth();
     }, []);
 
-    const login = (role: UserRole) => {
-        const demoUser = DEMO_USERS[role];
-        setUser(demoUser);
-        localStorage.setItem("everleap_demo_user", JSON.stringify(demoUser));
+    const login = async (email: string, password: string) => {
+        try {
+            const { data } = await api.post("/auth/login", { email, password });
 
-        if (role === "SUPER_ADMIN") {
-            router.push("/platform-dashboard");
-        } else if (role === "CANDIDATE") {
-            router.push("/my-applications");
-        } else if (role === "ORG_ADMIN") {
-            router.push("/dashboard");
-        } else {
-            router.push("/dashboard");
+            localStorage.setItem("everleap_access_token", data.access_token);
+            localStorage.setItem("everleap_refresh_token", data.refresh_token);
+
+            setUser(data.user);
+
+            const roles = data.user.roles || [];
+            if (roles.includes("SUPER_ADMIN")) {
+                router.push("/platform-dashboard");
+            } else if (roles.includes("CANDIDATE")) {
+                router.push("/my-applications");
+            } else {
+                router.push("/dashboard");
+            }
+            toast.success("Welcome back!");
+        } catch (error: any) {
+            console.error("Login failed", error);
+            const message = error.response?.data?.detail || "Invalid email or password";
+            toast.error(message);
+            throw error;
         }
     };
 
-    const logout = () => {
+    const registerCandidate = async (registrationData: any) => {
+        try {
+            const { data } = await api.post("/auth/register", registrationData);
+
+            localStorage.setItem("everleap_access_token", data.access_token);
+            localStorage.setItem("everleap_refresh_token", data.refresh_token);
+
+            // Re-fetch user to get full profile if needed, or assume data.user is returned if API changes.
+            // Based on schemas, register returns tokens. We might need to fetch /me or just trust tokens work.
+            // Let's fetch /me to be sure we have the user state correct.
+            const userResponse = await api.get("/auth/me");
+            setUser(userResponse.data);
+
+            router.push("/my-applications");
+            toast.success("Account created successfully!");
+        } catch (error: any) {
+            console.error("Registration failed", error);
+            const message = error.response?.data?.detail || "Registration failed";
+            toast.error(message);
+            throw error;
+        }
+    }
+
+    const logout = async () => {
+        try {
+            const refreshToken = localStorage.getItem("everleap_refresh_token");
+            if (refreshToken) {
+                await api.post("/auth/logout", { refresh_token: refreshToken });
+            }
+        } catch (e) {
+            console.error("Logout error", e);
+        }
+
         setUser(null);
-        localStorage.removeItem("everleap_demo_user");
+        localStorage.removeItem("everleap_access_token");
+        localStorage.removeItem("everleap_refresh_token");
         router.push("/login");
+        toast.info("Logged out successfully");
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+        <AuthContext.Provider value={{ user, isLoading, login, logout, registerCandidate }}>
             {children}
         </AuthContext.Provider>
     );

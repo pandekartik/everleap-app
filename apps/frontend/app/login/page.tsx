@@ -1,12 +1,73 @@
 "use client";
 
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator } from "@everleap/design-system";
-import { UserRole, useAuth } from "@/lib/mock-auth";
-import Link from "next/link";
-import { ArrowRight, ShieldCheck, User, Users, Calendar } from "lucide-react";
+import { Button, Input, Label } from "@everleap/design-system";
+import { useAuth } from "@/lib/mock-auth";
+import { ShieldCheck, Users } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@everleap/design-system";
 
 export default function LoginPage() {
-    const { login } = useAuth();
+    const { login, registerCandidate } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Login State
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+
+    // Register State
+    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+    const [regEmail, setRegEmail] = useState("");
+    const [regPassword, setRegPassword] = useState("");
+    const [regName, setRegName] = useState("");
+    const [regPhone, setRegPhone] = useState("");
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email || !password) {
+            toast.error("Please enter both email and password");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await login(email, password);
+        } catch (error) {
+            // Error is handled in AuthProvider
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!regEmail || !regPassword || !regName) {
+            toast.error("Please fill in all required fields");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await registerCandidate({
+                email: regEmail,
+                password: regPassword,
+                full_name: regName,
+                phone: regPhone
+            });
+            setIsRegisterOpen(false);
+        } catch (error) {
+            // Error handled in provider
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
@@ -41,80 +102,128 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                {/* Right Side: Demo Login */}
+                {/* Right Side: Login Form */}
                 <div className="p-8 md:p-12 flex flex-col justify-center">
                     <div className="mb-8">
-                        <h2 className="text-2xl font-bold mb-2">Welcome to the Demo</h2>
-                        <p className="text-muted-foreground">Select a role to explore the platform.</p>
+                        <h2 className="text-2xl font-bold mb-2">Welcome back</h2>
+                        <p className="text-muted-foreground">Enter your credentials to access your account.</p>
                     </div>
 
-                    <div className="space-y-6">
-                        <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Organization Users</p>
-                            <div className="space-y-3">
-                                <DemoRoleButton
-                                    role="ORG_ADMIN"
-                                    title="Org Admin (IT)"
-                                    desc="Billing, Integrations, Access"
-                                    icon={<ShieldCheck className="h-5 w-5" />}
-                                    onClick={() => login("ORG_ADMIN")}
-                                />
-                                <DemoRoleButton
-                                    role="HR_ADMIN"
-                                    title="Head of Talent"
-                                    desc="Full control of Hiring Pipeline"
-                                    icon={<Users className="h-5 w-5" />}
-                                    onClick={() => login("HR_ADMIN")}
-                                />
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                placeholder="name@company.com"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Password</Label>
+                                <button type="button" className="text-xs text-primary hover:underline font-medium">
+                                    Forgot password?
+                                </button>
+                            </div>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <Button
+                            className="w-full"
+                            size="lg"
+                            type="submit"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? "Signing in..." : "Sign in"}
+                        </Button>
+
+                        <div className="relative my-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">Or</span>
                             </div>
                         </div>
 
-                        <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Job Candidates</p>
-                            <div className="space-y-3">
-                                <DemoRoleButton
-                                    role="CANDIDATE"
-                                    title="Candidate"
-                                    desc="Apply to jobs, track applications"
-                                    icon={<User className="h-5 w-5" />}
-                                    onClick={() => login("CANDIDATE")}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Everleap Staff</p>
-                            <div className="space-y-3">
-                                <DemoRoleButton
-                                    role="SUPER_ADMIN"
-                                    title="Platform Superadmin"
-                                    desc="Manage tenants, billing & API"
-                                    icon={<User className="h-5 w-5" />}
-                                    onClick={() => login("SUPER_ADMIN")}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                        <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
+                            <DialogTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="w-full"
+                                    size="lg"
+                                    type="button"
+                                    disabled={isLoading}
+                                >
+                                    Register as Candidate
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Create an Account</DialogTitle>
+                                    <DialogDescription>
+                                        Register as a candidate to apply for jobs and track your applications.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleRegister} className="space-y-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reg-name">Full Name</Label>
+                                        <Input
+                                            id="reg-name"
+                                            placeholder="John Doe"
+                                            value={regName}
+                                            onChange={(e) => setRegName(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reg-email">Email</Label>
+                                        <Input
+                                            id="reg-email"
+                                            placeholder="john@example.com"
+                                            type="email"
+                                            value={regEmail}
+                                            onChange={(e) => setRegEmail(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reg-phone">Phone (Optional)</Label>
+                                        <Input
+                                            id="reg-phone"
+                                            placeholder="+1 (555) 000-0000"
+                                            value={regPhone}
+                                            onChange={(e) => setRegPhone(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reg-password">Password</Label>
+                                        <Input
+                                            id="reg-password"
+                                            type="password"
+                                            value={regPassword}
+                                            onChange={(e) => setRegPassword(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <Button type="submit" className="w-full" disabled={isLoading}>
+                                        {isLoading ? "Creating Account..." : "Create Account"}
+                                    </Button>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </form>
                 </div>
             </div>
         </div>
     );
-}
-
-function DemoRoleButton({ role, title, desc, icon, onClick }: { role: string, title: string, desc: string, icon: React.ReactNode, onClick: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            className="w-full flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/50 transition-all group text-left"
-        >
-            <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                {icon}
-            </div>
-            <div className="flex-1">
-                <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{title}</h3>
-                <p className="text-xs text-muted-foreground">{desc}</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-        </button>
-    )
 }
