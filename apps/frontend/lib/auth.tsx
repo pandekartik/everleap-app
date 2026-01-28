@@ -39,10 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 try {
                     const { data } = await api.get("/auth/me");
                     setUser(data);
-                } catch (error) {
+                } catch (error: any) {
                     console.error("Failed to fetch user", error);
-                    localStorage.removeItem("everleap_access_token");
-                    localStorage.removeItem("everleap_refresh_token");
+                    // Only clear token if it's a 401 or 403, otherwise it might be a network error
+                    if (error.response?.status === 401 || error.response?.status === 403) {
+                        localStorage.removeItem("everleap_access_token");
+                        localStorage.removeItem("everleap_refresh_token");
+                    }
                 }
             }
             setIsLoading(false);

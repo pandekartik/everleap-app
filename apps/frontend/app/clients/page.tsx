@@ -8,6 +8,7 @@ import { CreateClientDialog } from "@/components/admin/CreateClientDialog";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/auth";
 
 interface Company {
     id: string;
@@ -24,6 +25,7 @@ interface Company {
 
 export default function AdminClientsPage() {
     const router = useRouter();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const [clients, setClients] = useState<Company[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -39,15 +41,33 @@ export default function AdminClientsPage() {
             setClients(response.data);
         } catch (error) {
             console.error("Failed to fetch clients:", error);
-            toast.error("Failed to load organizations");
+            // Only show toast if user is actually logged in, otherwise let auth redirect handle it
+            if (user) {
+                toast.error("Failed to load organizations");
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchClients();
-    }, []);
+        if (!isAuthLoading) {
+            if (!user) {
+                router.push("/login"); // Or handled by a global protection component
+                return;
+            }
+            fetchClients();
+        }
+    }, [isAuthLoading, user]);
+
+    // Show loading state while checking auth
+    if (isAuthLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     // Filter and sort clients
     const filteredClients = clients.filter(client => {
