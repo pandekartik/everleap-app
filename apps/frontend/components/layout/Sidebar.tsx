@@ -124,11 +124,19 @@ export function Sidebar() {
 
             <div className="p-4 border-t border-slate-100 bg-slate-50/50">
                 <div className="flex items-center gap-3 mb-3 px-2">
-                    <img
-                        src={user?.avatarUrl || "https://i.pravatar.cc/150"}
-                        className="h-8 w-8 rounded-full bg-muted border"
-                        alt="User"
-                    />
+                    {user?.avatarUrl ? (
+                        <img
+                            src={user.avatarUrl}
+                            className="h-8 w-8 rounded-full bg-muted border"
+                            alt="User"
+                        />
+                    ) : (
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs border border-primary/20">
+                            {user?.full_name
+                                ? user.full_name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
+                                : user?.email?.substring(0, 2).toUpperCase() || "U"}
+                        </div>
+                    )}
                     <div className="flex-1 overflow-hidden">
                         <p className="text-sm font-medium truncate">{user?.full_name || "Demo User"}</p>
                         <p className="text-xs text-muted-foreground truncate">{user?.roles?.[0] || "Guest"}</p>
