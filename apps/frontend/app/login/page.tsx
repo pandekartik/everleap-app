@@ -2,7 +2,7 @@
 
 import { Button, Input, Label } from "@everleap/design-system";
 import { useAuth } from "@/lib/auth";
-import { ShieldCheck, Users } from "lucide-react";
+import { ShieldCheck, Users, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -28,6 +28,10 @@ export default function LoginPage() {
     const [regPassword, setRegPassword] = useState("");
     const [regName, setRegName] = useState("");
     const [regPhone, setRegPhone] = useState("");
+
+    // Password Visibility State
+    const [showPassword, setShowPassword] = useState(false);
+    const [showRegPassword, setShowRegPassword] = useState(false);
 
     const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -133,14 +137,28 @@ export default function LoginPage() {
                                     Forgot password?
                                 </button>
                             </div>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                autoComplete="current-password"
-                                disabled={isLoading}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="current-password"
+                                    disabled={isLoading}
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         <Button
@@ -222,14 +240,28 @@ export default function LoginPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="reg-password">Password</Label>
-                                        <Input
-                                            id="reg-password"
-                                            type="password"
-                                            value={regPassword}
-                                            onChange={(e) => setRegPassword(e.target.value)}
-                                            autoComplete="new-password"
-                                            required
-                                        />
+                                        <div className="relative">
+                                            <Input
+                                                id="reg-password"
+                                                type={showRegPassword ? "text" : "password"}
+                                                value={regPassword}
+                                                onChange={(e) => setRegPassword(e.target.value)}
+                                                autoComplete="new-password"
+                                                required
+                                                className="pr-10"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowRegPassword(!showRegPassword)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                {showRegPassword ? (
+                                                    <EyeOff className="h-4 w-4" />
+                                                ) : (
+                                                    <Eye className="h-4 w-4" />
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
                                     <Button type="submit" className="w-full" disabled={isLoading}>
                                         {isLoading ? "Creating Account..." : "Create Account"}
