@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button, Input, Card, CardContent, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge } from "@everleap/design-system";
-import { Search, Filter, Download, Building2, Users, DollarSign, TrendingUp, ExternalLink, Settings as SettingsIcon, ChevronUp, ChevronDown, ArrowUpDown, Loader2 } from "lucide-react";
+import { Search, Filter, Download, Building2, Users, DollarSign, TrendingUp, ExternalLink, Settings as SettingsIcon, ChevronUp, ChevronDown, ArrowUpDown, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CreateClientDialog } from "@/components/admin/CreateClientDialog";
 import { api } from "@/lib/api";
@@ -47,6 +47,19 @@ export default function AdminClientsPage() {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleDeleteClient = async (id: string, name: string) => {
+        if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) return;
+
+        try {
+            await api.delete(`/companies/${id}`);
+            toast.success("Organization deleted successfully");
+            fetchClients();
+        } catch (error) {
+            console.error("Failed to delete client:", error);
+            toast.error("Failed to delete organization");
         }
     };
 
@@ -284,6 +297,17 @@ export default function AdminClientsPage() {
                                             </Button>
                                             <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-600 hover:text-primary">
                                                 <SettingsIcon className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 px-2 text-slate-600 hover:text-red-600 hover:bg-red-50"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteClient(client.id, client.name);
+                                                }}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
                                         </div>
                                     </TableCell>
