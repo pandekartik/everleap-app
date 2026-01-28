@@ -61,11 +61,11 @@ export default function CandidateLayout({ children }: CandidateLayoutProps) {
                             >
                                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                                     <span className="text-sm font-semibold text-primary">
-                                        {user?.name?.charAt(0) || "U"}
+                                        {user?.full_name?.charAt(0) || "U"}
                                     </span>
                                 </div>
                                 <div className="hidden sm:block text-left">
-                                    <p className="text-sm font-medium text-slate-900">{user?.name || "User"}</p>
+                                    <p className="text-sm font-medium text-slate-900">{user?.full_name || "User"}</p>
                                     <p className="text-xs text-slate-500">Candidate</p>
                                 </div>
                                 <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -82,7 +82,7 @@ export default function CandidateLayout({ children }: CandidateLayoutProps) {
                                     />
                                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-slate-200 shadow-lg z-20">
                                         <div className="p-3 border-b border-slate-100">
-                                            <p className="text-sm font-medium text-slate-900">{user?.name}</p>
+                                            <p className="text-sm font-medium text-slate-900">{user?.full_name}</p>
                                             <p className="text-xs text-slate-500">{user?.email}</p>
                                         </div>
                                         <div className="py-1">

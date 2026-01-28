@@ -14,7 +14,7 @@ export default function ApplyJobPage() {
     const router = useRouter();
     const { user } = useAuth();
     const jobId = params.jobId as string;
-    const [showAuthPrompt, setShowAuthPrompt] = useState(!user || user.role !== "CANDIDATE");
+    const [showAuthPrompt, setShowAuthPrompt] = useState(!user || !user.roles.includes("CANDIDATE"));
 
     // Find job from mock data
     const job = MOCK_ROLES.find(r => r.id === jobId);
@@ -62,7 +62,7 @@ export default function ApplyJobPage() {
     };
 
     const handleStartApplication = () => {
-        if (!user || user.role !== "CANDIDATE") {
+        if (!user || !user.roles.includes("CANDIDATE")) {
             // Redirect to signup with job ID
             router.push(`/candidate/signup?jobId=${jobId}`);
         } else {
@@ -75,10 +75,10 @@ export default function ApplyJobPage() {
             {/* Header */}
             <div className="bg-white border-b border-slate-200">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <Link href={user?.role === "CANDIDATE" ? "/candidate/dashboard" : "/"}>
+                    <Link href={user?.roles.includes("CANDIDATE") ? "/candidate/dashboard" : "/"}>
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to {user?.role === "CANDIDATE" ? "Dashboard" : "Jobs"}
+                            Back to {user?.roles.includes("CANDIDATE") ? "Dashboard" : "Jobs"}
                         </Button>
                     </Link>
                 </div>

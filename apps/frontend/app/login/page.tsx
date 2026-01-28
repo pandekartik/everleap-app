@@ -77,7 +77,6 @@ export default function LoginPage() {
                     <div>
                         <div className="flex items-center gap-2 mb-8">
                             <img src="/Logo.svg" alt="Everleap" className="h-8 w-auto invert brightness-0" />
-                            <span className="font-bold text-xl tracking-tight">Everleap</span>
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">
                             Autonomous hiring for modern teams.

@@ -17,7 +17,7 @@ import Link from "next/link";
 
 export default function DashboardPage() {
     const { user } = useAuth();
-    const firstName = user?.name.split(" ")[0] || "there";
+    const firstName = user?.full_name?.split(" ")[0] || "User";
 
     return (
         <div className="space-y-8">
@@ -26,13 +26,13 @@ export default function DashboardPage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Good morning, {firstName}</h1>
                     <p className="text-slate-500 mt-1">
-                        {user?.role === "ORG_ADMIN"
+                        {user?.roles.includes("ORG_ADMIN")
                             ? "Here is your organization's overview and usage status."
                             : "Here's what's happening with your hiring pipeline today."}
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    {user?.role !== "ORG_ADMIN" && (
+                    {!user?.roles.includes("ORG_ADMIN") && (
                         <Link href="/hiring/create">
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
@@ -40,7 +40,7 @@ export default function DashboardPage() {
                             </Button>
                         </Link>
                     )}
-                    {user?.role === "ORG_ADMIN" && (
+                    {user?.roles.includes("ORG_ADMIN") && (
                         <Link href="/employees">
                             <Button>
                                 <Users className="mr-2 h-4 w-4" />
@@ -52,7 +52,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Org Admin View */}
-            {user?.role === "ORG_ADMIN" ? (
+            {user?.roles.includes("ORG_ADMIN") ? (
                 <div className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-4">
                         <MetricCard
