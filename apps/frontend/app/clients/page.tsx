@@ -1,107 +1,65 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Input, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge } from "@everleap/design-system";
-import { Search, Filter, Download, Plus, Building2, Users, DollarSign, TrendingUp, ExternalLink, Settings as SettingsIcon, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button, Input, Card, CardContent, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge } from "@everleap/design-system";
+import { Search, Filter, Download, Building2, Users, DollarSign, TrendingUp, ExternalLink, Settings as SettingsIcon, ChevronUp, ChevronDown, ArrowUpDown, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { CreateClientDialog } from "@/components/admin/CreateClientDialog";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
-const MOCK_CLIENTS = [
-    {
-        id: "org_acme",
-        name: "Acme Corp",
-        adminEmail: "sarah@acme.inc",
-        plan: "Enterprise",
-        status: "ACTIVE",
-        users: 45,
-        mrr: 2999,
-        health: 95,
-        activeJobs: 12,
-        joinedDate: "Feb 12, 2024"
-    },
-    {
-        id: "org_globex",
-        name: "Globex Corporation",
-        adminEmail: "hank@globex.com",
-        plan: "Professional",
-        status: "ACTIVE",
-        users: 25,
-        mrr: 799,
-        health: 88,
-        activeJobs: 5,
-        joinedDate: "Mar 01, 2024"
-    },
-    {
-        id: "org_techstart",
-        name: "TechStart Inc",
-        adminEmail: "founder@techstart.io",
-        plan: "Professional",
-        status: "TRIAL",
-        users: 8,
-        mrr: 0,
-        health: 75,
-        activeJobs: 2,
-        joinedDate: "Jan 18, 2026"
-    },
-    {
-        id: "org_soylent",
-        name: "Soylent Corp",
-        adminEmail: "admin@soylent.green",
-        plan: "Starter",
-        status: "SUSPENDED",
-        users: 10,
-        mrr: 0,
-        health: 20,
-        activeJobs: 0,
-        joinedDate: "Jan 10, 2024"
-    },
-    {
-        id: "org_initech",
-        name: "Initech",
-        adminEmail: "bill@initech.com",
-        plan: "Starter",
-        status: "ACTIVE",
-        users: 12,
-        mrr: 99,
-        health: 92,
-        activeJobs: 3,
-        joinedDate: "Nov 05, 2023"
-    },
-    {
-        id: "org_umbrella",
-        name: "Umbrella Corp",
-        adminEmail: "admin@umbrella.corp",
-        plan: "Enterprise",
-        status: "ACTIVE",
-        users: 120,
-        mrr: 2999,
-        health: 98,
-        activeJobs: 25,
-        joinedDate: "Aug 15, 2023"
-    }
-];
+interface Company {
+    id: string;
+    name: string;
+    domain: string;
+    subscription_tier: string;
+    is_active: boolean;
+    created_at: string;
+    // These might be missing from list API, using placeholders or handling elegantly
+    total_employees?: number;
+    total_jobs?: number;
+    api_credits_used?: number;
+}
 
 export default function AdminClientsPage() {
     const router = useRouter();
+    const [clients, setClients] = useState<Company[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [planFilter, setPlanFilter] = useState("all");
-    const [sortBy, setSortBy] = useState<"name" | "plan" | "status" | "health" | "joined">("joined");
+    const [sortBy, setSortBy] = useState<"name" | "plan" | "status" | "date">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-    // Calculate stats
-    const totalClients = MOCK_CLIENTS.length;
-    const activeClients = MOCK_CLIENTS.filter(c => c.status === "ACTIVE").length;
-    const trialClients = MOCK_CLIENTS.filter(c => c.status === "TRIAL").length;
-    const totalMRR = MOCK_CLIENTS.reduce((sum, c) => sum + c.mrr, 0);
+    const fetchClients = async () => {
+        setIsLoading(true);
+        try {
+            const response = await api.get("/companies");
+            setClients(response.data);
+        } catch (error) {
+            console.error("Failed to fetch clients:", error);
+            toast.error("Failed to load organizations");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchClients();
+    }, []);
 
     // Filter and sort clients
-    const filteredClients = MOCK_CLIENTS.filter(client => {
+    const filteredClients = clients.filter(client => {
         const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            client.adminEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            client.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
             client.id.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-        const matchesPlan = planFilter === "all" || client.plan === planFilter;
+
+        const status = client.is_active ? "ACTIVE" : "INACTIVE";
+        const matchesStatus = statusFilter === "all" || status === statusFilter;
+
+        const matchesPlan = planFilter === "all" || client.subscription_tier === planFilter;
+
         return matchesSearch && matchesStatus && matchesPlan;
     }).sort((a, b) => {
         let comparison = 0;
@@ -110,16 +68,13 @@ export default function AdminClientsPage() {
                 comparison = a.name.localeCompare(b.name);
                 break;
             case "plan":
-                comparison = a.plan.localeCompare(b.plan);
+                comparison = a.subscription_tier.localeCompare(b.subscription_tier);
                 break;
             case "status":
-                comparison = a.status.localeCompare(b.status);
+                comparison = Number(a.is_active) - Number(b.is_active);
                 break;
-            case "health":
-                comparison = a.health - b.health;
-                break;
-            case "joined":
-                comparison = new Date(a.joinedDate).getTime() - new Date(b.joinedDate).getTime();
+            case "date":
+                comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
                 break;
         }
         return sortOrder === "asc" ? comparison : -comparison;
@@ -141,38 +96,24 @@ export default function AdminClientsPage() {
             <ChevronDown className="ml-2 h-3.5 w-3.5 text-primary" />;
     };
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case "ACTIVE":
-                return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Active</Badge>;
-            case "TRIAL":
-                return <Badge className="bg-blue-50 text-blue-700 border-blue-200">Trial</Badge>;
-            case "SUSPENDED":
-                return <Badge className="bg-red-50 text-red-700 border-red-200">Suspended</Badge>;
-            case "CHURNED":
-                return <Badge className="bg-slate-100 text-slate-600 border-slate-200">Churned</Badge>;
-            default:
-                return <Badge variant="outline">{status}</Badge>;
+    const getStatusBadge = (isActive: boolean) => {
+        if (isActive) {
+            return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Active</Badge>;
         }
+        return <Badge className="bg-slate-100 text-slate-600 border-slate-200">Inactive</Badge>;
     };
 
     const getPlanBadge = (plan: string) => {
-        switch (plan) {
-            case "Enterprise":
+        switch (plan.toLowerCase()) {
+            case "enterprise":
                 return <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-200">Enterprise</Badge>;
-            case "Professional":
+            case "pro":
                 return <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">Professional</Badge>;
-            case "Starter":
-                return <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">Starter</Badge>;
+            case "basic":
+                return <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">Basic</Badge>;
             default:
                 return <Badge variant="outline">{plan}</Badge>;
         }
-    };
-
-    const getHealthColor = (health: number) => {
-        if (health >= 80) return "text-emerald-600";
-        if (health >= 60) return "text-yellow-600";
-        return "text-red-600";
     };
 
     return (
@@ -183,38 +124,37 @@ export default function AdminClientsPage() {
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Clients</h1>
                     <p className="text-slate-500 mt-1">Manage organizations and their subscriptions</p>
                 </div>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Create Organization
-                </Button>
+                <CreateClientDialog onSuccess={fetchClients} />
             </div>
 
             {/* Stats Cards */}
             <div className="grid gap-4 md:grid-cols-4">
                 <MetricCard
                     title="Total Clients"
-                    value={totalClients.toString()}
-                    trend={`${activeClients} active`}
+                    value={clients.length.toString()}
+                    trend={`${clients.filter(c => c.is_active).length} active`}
                     icon={Building2}
                     trendColor="text-emerald-600"
                 />
                 <MetricCard
                     title="Active"
-                    value={activeClients.toString()}
-                    trend={`${trialClients} on trial`}
+                    value={clients.filter(c => c.is_active).length.toString()}
+                    trend="Organizations"
                     icon={TrendingUp}
                     trendColor="text-blue-600"
                 />
+                {/* These are placeholders as the API doesn't return aggregate metrics efficiently yet */}
                 <MetricCard
                     title="Total Users"
-                    value={MOCK_CLIENTS.reduce((sum, c) => sum + c.users, 0).toString()}
+                    value="-"
                     trend="Across all orgs"
                     icon={Users}
                     trendColor="text-slate-600"
                 />
                 <MetricCard
-                    title="Total MRR"
-                    value={`$${totalMRR.toLocaleString()}`}
-                    trend="+12% from last month"
+                    title="Total Revenue"
+                    value="-"
+                    trend="Needs Integration"
                     icon={DollarSign}
                     trendColor="text-emerald-600"
                 />
@@ -228,7 +168,7 @@ export default function AdminClientsPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input
                                 type="search"
-                                placeholder="Search by name, email, or ID..."
+                                placeholder="Search by name, domain, or ID..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 bg-white border-slate-200"
@@ -241,9 +181,7 @@ export default function AdminClientsPage() {
                         >
                             <option value="all">All Status</option>
                             <option value="ACTIVE">Active</option>
-                            <option value="TRIAL">Trial</option>
-                            <option value="SUSPENDED">Suspended</option>
-                            <option value="CHURNED">Churned</option>
+                            <option value="INACTIVE">Inactive</option>
                         </select>
                         <select
                             value={planFilter}
@@ -251,9 +189,9 @@ export default function AdminClientsPage() {
                             className="h-9 px-3 rounded-md border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="all">All Plans</option>
-                            <option value="Enterprise">Enterprise</option>
-                            <option value="Professional">Professional</option>
-                            <option value="Starter">Starter</option>
+                            <option value="enterprise">Enterprise</option>
+                            <option value="pro">Pro</option>
+                            <option value="basic">Basic</option>
                         </select>
                         <Button variant="outline" size="sm" className="text-slate-600">
                             <Filter className="h-4 w-4 mr-2" />
@@ -272,7 +210,7 @@ export default function AdminClientsPage() {
                 <Table>
                     <TableHeader className="bg-slate-50/50">
                         <TableRow className="border-slate-100 hover:bg-slate-50/50">
-                            <TableHead className="w-[200px] cursor-pointer" onClick={() => handleSort("name")}>
+                            <TableHead className="w-[300px] cursor-pointer" onClick={() => handleSort("name")}>
                                 <div className="flex items-center">Organization<SortIcon column="name" /></div>
                             </TableHead>
                             <TableHead className="cursor-pointer" onClick={() => handleSort("plan")}>
@@ -281,22 +219,25 @@ export default function AdminClientsPage() {
                             <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                                 <div className="flex items-center">Status<SortIcon column="status" /></div>
                             </TableHead>
-                            <TableHead className="text-center">Users</TableHead>
-                            <TableHead className="text-center">Jobs</TableHead>
-                            <TableHead className="text-right">MRR</TableHead>
-                            <TableHead className="text-center cursor-pointer" onClick={() => handleSort("health")}>
-                                <div className="flex items-center justify-center">Health<SortIcon column="health" /></div>
-                            </TableHead>
-                            <TableHead className="cursor-pointer" onClick={() => handleSort("joined")}>
-                                <div className="flex items-center">Joined<SortIcon column="joined" /></div>
+                            <TableHead className="text-center cursor-pointer" onClick={() => handleSort("date")}>
+                                <div className="flex items-center justify-center">Joined<SortIcon column="date" /></div>
                             </TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredClients.length === 0 ? (
+                        {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="text-center py-12 text-slate-500">
+                                <TableCell colSpan={5} className="text-center py-12 text-slate-500">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                        Loading organizations...
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredClients.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-12 text-slate-500">
                                     No organizations found matching your criteria
                                 </TableCell>
                             </TableRow>
@@ -305,7 +246,7 @@ export default function AdminClientsPage() {
                                 <TableRow
                                     key={client.id}
                                     className="border-slate-100 group hover:bg-slate-50/50 cursor-pointer"
-                                    onClick={() => router.push(`/admin/clients/${client.id}`)}
+                                    onClick={() => router.push(`/platform-dashboard/clients/${client.id}`)}
                                 >
                                     <TableCell>
                                         <div className="flex items-center gap-3">
@@ -314,31 +255,15 @@ export default function AdminClientsPage() {
                                             </div>
                                             <div>
                                                 <p className="font-semibold text-slate-900">{client.name}</p>
-                                                <p className="text-xs text-slate-500 mt-0.5">{client.adminEmail}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">{client.domain}</p>
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{getPlanBadge(client.plan)}</TableCell>
-                                    <TableCell>{getStatusBadge(client.status)}</TableCell>
-                                    <TableCell className="text-center">
-                                        <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                                            {client.users}
-                                        </span>
+                                    <TableCell>{getPlanBadge(client.subscription_tier)}</TableCell>
+                                    <TableCell>{getStatusBadge(client.is_active)}</TableCell>
+                                    <TableCell className="text-center text-slate-600 text-sm">
+                                        {format(new Date(client.created_at), "MMM d, yyyy")}
                                     </TableCell>
-                                    <TableCell className="text-center">
-                                        <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                                            {client.activeJobs}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm text-slate-900">
-                                        ${client.mrr.toLocaleString()}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <span className={`font-semibold ${getHealthColor(client.health)}`}>
-                                            {client.health}%
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-slate-600 text-sm">{client.joinedDate}</TableCell>
                                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center justify-end gap-2">
                                             <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-600 hover:text-primary">
