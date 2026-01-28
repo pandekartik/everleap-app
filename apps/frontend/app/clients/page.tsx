@@ -213,14 +213,7 @@ export default function AdminClientsPage() {
                             <option value="pro">Pro</option>
                             <option value="basic">Basic</option>
                         </select>
-                        <Button variant="outline" size="sm" className="text-slate-600">
-                            <Filter className="h-4 w-4 mr-2" />
-                            More Filters
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-slate-600">
-                            <Download className="h-4 w-4 mr-2" />
-                            Export
-                        </Button>
+
                     </div>
                 </CardContent>
             </Card>
