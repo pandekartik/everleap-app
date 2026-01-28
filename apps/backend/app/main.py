@@ -3,11 +3,13 @@ Main FastAPI application entry point.
 Configures middleware, routers, and lifecycle events.
 """
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from core.config import settings
 from db.session import close_db
@@ -53,7 +55,15 @@ app.add_middleware(
 # GZip Middleware for response compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-
+# Mount static files for logo (served from local filesystem)
+static_path = Path(__file__).parent / "everleap_logo"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+    print(f"✅ Static files mounted from: {static_path}")
+    print(f"✅ Logo available at: {settings.BACKEND_URL}/static/Logo.png")
+else:
+    print(f"⚠️  Warning: Static files directory not found: {static_path}")
+    
 # Exception Handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
@@ -91,13 +101,14 @@ async def root():
 
 
 # API V1 Routers
-from api.v1.endpoints import auth, companies, jobs, applications, candidates
+from api.v1.endpoints import auth, companies, jobs, applications, candidates, linkedin
 
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(companies.router, prefix=settings.API_V1_PREFIX)
 app.include_router(jobs.router, prefix=settings.API_V1_PREFIX)
 app.include_router(applications.router, prefix=settings.API_V1_PREFIX)
 app.include_router(candidates.router, prefix=settings.API_V1_PREFIX)
+app.include_router(linkedin.router, prefix=settings.API_V1_PREFIX)
 
 
 if __name__ == "__main__":

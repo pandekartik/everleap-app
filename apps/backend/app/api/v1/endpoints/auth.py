@@ -2,9 +2,13 @@
 Authentication API endpoints.
 Handles login, registration, password management, and token refresh.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Form, Query
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from jose import JWTError
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,6 +46,8 @@ from services.email import email_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Setup templates
+templates = Jinja2Templates(directory=str(Path(__file__).parent.parent.parent.parent / "templates"))  # ✅ FIXED
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register_candidate(
@@ -55,7 +61,7 @@ async def register_candidate(
     """
     # Check if email already exists
     existing_user = await db.execute(
-        select(User).where(User.email == registration.email)
+        select(User).where(User.email == registration.email, User.deleted_at.is_(None))
     )
     if existing_user.scalar_one_or_none():
         raise HTTPException(
@@ -94,13 +100,16 @@ async def register_candidate(
     await db.commit()
     await db.refresh(user)
     
-    # Send verification email
-    verification_link = f"{settings.EMAIL_VERIFICATION_URL}?token={verification_token}"
-    await email_service.send_email(
+    # Send verification email using template
+    verification_link = f"{settings.BACKEND_URL}/api/v1/auth/verify-email?token={verification_token}"
+    await email_service.send_templated_email(
+        db=db,
         to_email=user.email,
-        subject="Verify your email",
-        body_html=f"<p>Please verify your email by clicking: <a href='{verification_link}'>Verify Email</a></p>",
-        body_text=f"Please verify your email: {verification_link}"
+        template_name="email_verification",
+        context={
+            "user_name": user.full_name,
+            "verification_link": verification_link
+        }
     )
     
     # Create tokens
@@ -239,7 +248,7 @@ async def refresh_token(
             )
         
         # Check expiration
-        if stored_token.expires_at < datetime.utcnow():
+        if stored_token.expires_at < datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Refresh token expired"
@@ -253,7 +262,7 @@ async def refresh_token(
         await db.execute(
             update(RefreshToken).where(
                 RefreshToken.id == stored_token.id
-            ).values(revoked_at=datetime.utcnow())
+            ).values(revoked_at=datetime.now(timezone.utc))
         )
         
         # Store new refresh token
@@ -306,7 +315,7 @@ async def set_password(
             )
         
         # Check token expiration
-        if user.email_verification_expires and user.email_verification_expires < datetime.utcnow():
+        if user.email_verification_expires and user.email_verification_expires < datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Token expired"
@@ -332,14 +341,142 @@ async def set_password(
             detail="Invalid or expired token"
         )
 
+@router.get("/set-password", response_class=HTMLResponse)
+async def set_password_page(
+    request: Request,
+    token: str = Query(..., description="Activation token"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Serve set-password form page.
+    User clicks activation link in welcome email and lands here.
+    
+    URL: http://34.14.169.188:8000/api/v1/auth/set-password?token=xxx
+    """
+    try:
+        # Verify token to get user info
+        email = verify_email_verification_token(token)
+        
+        # Find user
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            return templates.TemplateResponse("set_password_error.html", {
+                "request": request,
+                "support_email": "support@everleap.com",
+                "home_url": settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "/"
+            })
+        
+        # Check if token is expired
+        if user.email_verification_expires and user.email_verification_expires < datetime.now(timezone.utc):
+            return templates.TemplateResponse("set_password_error.html", {
+                "request": request,
+                "support_email": "support@everleap.com",
+                "home_url": settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "/"
+            })
+        
+        # Show set-password form
+        return templates.TemplateResponse("set_password.html", {
+            "request": request,
+            "token": token,
+            "user_name": user.full_name
+        })
+        
+    except JWTError:
+        return templates.TemplateResponse("set_password_error.html", {
+            "request": request,
+            "support_email": "support@everleap.com",
+            "home_url": settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "/"
+        })
 
+
+@router.get("/set-password-success", response_class=HTMLResponse)
+async def set_password_success_page(request: Request):
+    """
+    Success page after password is set.
+    User is redirected here after successfully setting password.
+    
+    URL: http://34.14.169.188:8000/api/v1/auth/set-password-success
+    """
+    return templates.TemplateResponse("set_password_success.html", {
+        "request": request,
+        "login_url": f"{settings.FRONTEND_URL}/login" if hasattr(settings, 'FRONTEND_URL') else "/login"
+    })
+
+# ============================================================================
+# GET ENDPOINT: Email Verification (Browser-based)
+# ============================================================================
+@router.get("/verify-email", response_class=HTMLResponse)
+async def verify_email_get(
+    request: Request,
+    token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verify user email address (GET endpoint for browser).
+    User clicks link in email and is redirected here.
+    """
+    try:
+        email = verify_email_verification_token(token)
+        
+        # Find user
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            return templates.TemplateResponse("verify_error.html", {
+                "request": request,
+                "error": "User not found"
+            })
+        
+        # Check if already verified
+        if user.is_email_verified:
+            return templates.TemplateResponse("verify_success.html", {
+                "request": request,
+                "user_name": user.full_name,
+                "message": "Your email is already verified!",
+                "login_url": f"{settings.FRONTEND_URL}/login"
+            })
+        
+        # Update user
+        await db.execute(
+            update(User).where(User.id == user.id).values(
+                is_email_verified=True,
+                email_verification_token=None,
+                email_verification_expires=None
+            )
+        )
+        await db.commit()
+        
+        return templates.TemplateResponse("verify_success.html", {
+            "request": request,
+            "user_name": user.full_name,
+            "message": "Email verified successfully!",
+            "login_url": f"{settings.FRONTEND_URL}/login"
+        })
+        
+    except JWTError:
+        return templates.TemplateResponse("verify_error.html", {
+            "request": request,
+            "error": "Invalid or expired verification link"
+        })
+
+
+# ============================================================================
+# POST ENDPOINT: Email Verification (API-based)
+# ============================================================================
 @router.post("/verify-email")
-async def verify_email(
+async def verify_email_post(
     verification: EmailVerificationRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Verify user email address.
+    Verify user email address (POST endpoint for API).
     """
     try:
         email = verify_email_verification_token(verification.token)
@@ -405,29 +542,38 @@ async def request_password_reset(
         )
         await db.commit()
         
-        # Send reset email
-        reset_link = f"{settings.PASSWORD_RESET_URL}?token={reset_token}"
-        await email_service.send_email(
+        # Send reset email using template
+        reset_link = f"{settings.BACKEND_URL}/api/v1/auth/reset-password?token={reset_token}"
+        await email_service.send_templated_email(
+            db=db,
             to_email=user.email,
-            subject="Password Reset Request",
-            body_html=f"<p>Reset your password: <a href='{reset_link}'>Reset Password</a></p>",
-            body_text=f"Reset your password: {reset_link}"
+            template_name="password_reset",
+            context={
+                "user_name": user.full_name,
+                "reset_link": reset_link
+            },
+            company_id=user.company_id
         )
     
     # Always return success to prevent email enumeration
     return {"message": "If the email exists, a reset link has been sent"}
 
 
-@router.post("/reset-password")
-async def reset_password(
-    reset_data: PasswordResetConfirm,
+# ============================================================================
+# GET ENDPOINT: Password Reset Form (Browser-based)
+# ============================================================================
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_form(
+    request: Request,
+    token: str,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Reset password using reset token.
+    Show password reset form (GET endpoint for browser).
+    User clicks link in email and is shown a form to enter new password.
     """
     try:
-        email = verify_password_reset_token(reset_data.token)
+        email = verify_password_reset_token(token)
         
         # Find user
         result = await db.execute(
@@ -436,35 +582,104 @@ async def reset_password(
         user = result.scalar_one_or_none()
         
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+            return templates.TemplateResponse("reset_error.html", {
+                "request": request,
+                "error": "User not found"
+            })
         
         # Check token expiration
         if user.password_reset_expires and user.password_reset_expires < datetime.utcnow():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Token expired"
-            )
+            return templates.TemplateResponse("reset_error.html", {
+                "request": request,
+                "error": "Password reset link has expired"
+            })
+        
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "token": token,
+            "user_name": user.full_name
+        })
+        
+    except JWTError:
+        return templates.TemplateResponse("reset_error.html", {
+            "request": request,
+            "error": "Invalid password reset link"
+        })
+
+
+# ============================================================================
+# POST ENDPOINT: Password Reset Submit (Form submission)
+# ============================================================================
+@router.post("/reset-password", response_class=HTMLResponse)
+async def reset_password_submit(
+    request: Request,
+    token: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Process password reset form submission.
+    """
+    # Validate passwords match
+    if new_password != confirm_password:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "token": token,
+            "error": "Passwords do not match"
+        })
+    
+    # Validate password strength
+    if len(new_password) < 8:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "token": token,
+            "error": "Password must be at least 8 characters long"
+        })
+    
+    try:
+        email = verify_password_reset_token(token)
+        
+        # Find user
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            return templates.TemplateResponse("reset_error.html", {
+                "request": request,
+                "error": "User not found"
+            })
+        
+        # Check token expiration
+        if user.password_reset_expires and user.password_reset_expires < datetime.utcnow():
+            return templates.TemplateResponse("reset_error.html", {
+                "request": request,
+                "error": "Password reset link has expired"
+            })
         
         # Update password
         await db.execute(
             update(User).where(User.id == user.id).values(
-                password_hash=get_password_hash(reset_data.new_password),
+                password_hash=get_password_hash(new_password),
                 password_reset_token=None,
                 password_reset_expires=None
             )
         )
         await db.commit()
         
-        return {"message": "Password reset successfully"}
+        return templates.TemplateResponse("reset_success.html", {
+            "request": request,
+            "user_name": user.full_name,
+            "login_url": f"{settings.FRONTEND_URL}/login"
+        })
         
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired token"
-        )
+        return templates.TemplateResponse("reset_error.html", {
+            "request": request,
+            "error": "Invalid or expired password reset link"
+        })
 
 
 @router.get("/me", response_model=UserResponse)

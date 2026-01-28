@@ -2,7 +2,7 @@ import os
 from groq import Groq
 
 def test_groq():
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    client = Groq(api_key="")
 
     response = client.chat.completions.create(
         model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),

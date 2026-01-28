@@ -25,6 +25,11 @@ from schemas.job import (
     JobUpdate,
     PaginatedJobResponse,
 )
+from schemas.linkedin import (
+    PostJobToLinkedInRequest,
+    PostJobToLinkedInResponse,
+    LinkedInJobStatus
+)
 from services.audit import audit_service
 from services.credit import credit_service
 from services.unipile import unipile_service
@@ -303,31 +308,29 @@ async def publish_job(
     # Post to LinkedIn if requested
     if publish_data.post_to_linkedin:
         try:
-            linkedin_result = await unipile_service.post_job_to_linkedin(
+            linkedin_result = await unipile_service.create_linkedin_job_posting(
+                db=db,
+                company_id=job.company_id,
+                job_id=job.id,
                 job_title=job.job_title,
                 job_description=job.job_description,
                 location=job.location,
                 employment_type=job.employment_type,
-                company_name=company.name,
-                application_url=career_page_url
+                workplace_type="ONSITE",  # Or get from publish_data
+                application_url=career_page_url,
+                organization_id=None  # Or get from publish_data for company page posting
             )
             
             if linkedin_result["success"]:
-                job.linkedin_job_url = linkedin_result["linkedin_url"]
+                # Fields are already updated in database by the service
+                pass  # linkedin_job_id, linkedin_url, linkedin_posted_at set by service
                 
-                # Create LinkedIn posting record
-                linkedin_posting = JobPosting(
-                    job_id=job.id,
-                    platform="linkedin",
-                    external_id=linkedin_result.get("job_id"),
-                    post_url=linkedin_result["linkedin_url"],
-                    status="active"
-                )
-                db.add(linkedin_posting)
         except Exception as e:
-            # Log error but don't fail publish
-            pass
-    
+            # Log but don't block job publishing
+            logger.exception(
+                f"LinkedIn posting failed for job_id={job.id}: {str(e)}"
+            )
+
     # Update job status
     job.is_published = True
     job.published_at = datetime.utcnow()

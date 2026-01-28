@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: AnyHttpUrl
     PASSWORD_RESET_URL: str
     EMAIL_VERIFICATION_URL: str
+    BACKEND_URL: str
     
     # AI/LLM Configuration - Groq API
     GROQ_API_KEY: str

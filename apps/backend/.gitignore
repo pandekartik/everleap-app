@@ -40,7 +40,6 @@ venv.bak/
 .env
 .env.local
 .env.*.local
-.env.example
 
 # Database
 *.db
@@ -102,11 +101,3 @@ dmypy.json
 
 # Pyre
 .pyre/
-
-API_DOCUMENTATION.md
-PROJECT_DELIVERY_SUMMARY.md
-COMPLETE_FILE_LISTING.txt
-PROJECT_STRUCTURE.md
-COMPLETE_IMPLEMENTATION_GUIDE.md
-ARCHITECTURE.md
-/tests

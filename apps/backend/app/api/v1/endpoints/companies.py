@@ -343,11 +343,15 @@ async def create_user(
     
     # Send invitation email
     activation_link = f"{settings.EMAIL_VERIFICATION_URL}?token={invitation_token}"
-    await email_service.send_welcome_email(
+    await email_service.send_templated_email(
+        db=db,
         to_email=user.email,
-        user_name=user.full_name,
-        company_name=company.name,
-        activation_link=activation_link
+        template_name="welcome_email",
+        company_id=company.id,  # enables company-specific branding
+        context={
+            "user_name": user.full_name,
+            "activation_link": activation_link,
+        }
     )
     
     # Log user creation

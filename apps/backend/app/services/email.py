@@ -1,19 +1,23 @@
 """
-Email service for sending emails via Gmail SMTP.
-Supports templated emails and async sending.
+Email service with template support and SMTP sending.
+Loads email templates from database and sends branded emails via Gmail SMTP.
 """
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 from jinja2 import Template
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
+from models import Company, EmailQueue, EmailTemplate
 
 
 class EmailService:
-    """Service for sending emails via Gmail SMTP."""
+    """Service for sending emails using database templates and Gmail SMTP."""
     
     def __init__(self):
         """Initialize email service with SMTP configuration."""
@@ -23,6 +27,44 @@ class EmailService:
         self.smtp_password = settings.SMTP_PASSWORD
         self.from_email = settings.SMTP_FROM_EMAIL
         self.from_name = settings.SMTP_FROM_NAME
+    
+    def get_logo_url(self) -> str:
+        """
+        Get the logo URL from local backend.
+        Logo is served from /static/Logo.svg endpoint.
+        """
+        return f"{settings.BACKEND_URL}/static/Logo.png"
+    
+    async def get_template(
+        self, 
+        db: AsyncSession, 
+        template_name: str,
+        company_id: Optional[UUID] = None
+    ) -> Optional[EmailTemplate]:
+        """
+        Get email template from database.
+        First tries company-specific template, then falls back to system template.
+        """
+        if company_id:
+            # Try company-specific template first
+            result = await db.execute(
+                select(EmailTemplate).where(
+                    EmailTemplate.company_id == company_id,
+                    EmailTemplate.template_name == template_name
+                )
+            )
+            template = result.scalar_one_or_none()
+            if template:
+                return template
+        
+        # Fall back to system template
+        result = await db.execute(
+            select(EmailTemplate).where(
+                EmailTemplate.template_name == template_name,
+                EmailTemplate.is_system == True
+            )
+        )
+        return result.scalar_one_or_none()
     
     def _create_message(
         self,
@@ -66,14 +108,40 @@ class EmailService:
         
         return message
     
+    def render_template(self, template_html: str, variables: Dict[str, str]) -> str:
+        """
+        Render email template with variables.
+        Supports both Jinja2 syntax and simple {{variable}} replacement.
+        
+        Args:
+            template_html: HTML template string
+            variables: Dictionary of template variables
+            
+        Returns:
+            Rendered HTML string
+        """
+        # First try Jinja2 rendering
+        try:
+            template = Template(template_html)
+            return template.render(**variables)
+        except:
+            # Fall back to simple replacement
+            rendered = template_html
+            for key, value in variables.items():
+                # Replace {{key}} with value
+                rendered = rendered.replace(f"{{{{{key}}}}}", str(value))
+            return rendered
+    
     async def send_email(
         self,
         to_email: str,
         subject: str,
         body_html: str,
         body_text: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None
+        cc_emails: Optional[List[str]] = None,
+        bcc_emails: Optional[List[str]] = None,
+        attachments: Optional[Dict] = None,
+        priority: int = 5
     ) -> bool:
         """
         Send email via SMTP.
@@ -83,23 +151,25 @@ class EmailService:
             subject: Email subject
             body_html: HTML body
             body_text: Plain text body (optional)
-            cc: CC recipients (optional)
-            bcc: BCC recipients (optional)
+            cc_emails: CC recipients (optional)
+            bcc_emails: BCC recipients (optional)
+            attachments: Email attachments (optional)
+            priority: Email priority (1-10, 10 is highest)
             
         Returns:
             True if sent successfully, False otherwise
         """
         try:
             message = self._create_message(
-                to_email, subject, body_html, body_text, cc, bcc
+                to_email, subject, body_html, body_text, cc_emails, bcc_emails
             )
             
             # Prepare recipient list
             recipients = [to_email]
-            if cc:
-                recipients.extend(cc)
-            if bcc:
-                recipients.extend(bcc)
+            if cc_emails:
+                recipients.extend(cc_emails)
+            if bcc_emails:
+                recipients.extend(bcc_emails)
             
             # Send email
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
@@ -107,26 +177,84 @@ class EmailService:
                 server.login(self.smtp_user, self.smtp_password)
                 server.send_message(message, to_addrs=recipients)
             
+            print(f"\n{'='*80}")
+            print(f"[EMAIL] Successfully sent email to: {to_email}")
+            print(f"[EMAIL] Subject: {subject}")
+            print(f"[EMAIL] Priority: {priority}")
+            print(f"{'='*80}\n")
+            
             return True
             
         except Exception as e:
             # Log error (implement proper logging)
-            print(f"Email send error: {str(e)}")
+            print(f"\n{'='*80}")
+            print(f"[EMAIL ERROR] Failed to send email to: {to_email}")
+            print(f"[EMAIL ERROR] Subject: {subject}")
+            print(f"[EMAIL ERROR] Error: {str(e)}")
+            print(f"{'='*80}\n")
             return False
     
-    def render_template(self, template_html: str, variables: Dict[str, str]) -> str:
+    async def send_templated_email(
+        self,
+        db: AsyncSession,
+        to_email: str,
+        template_name: str,
+        context: Dict[str, Any],
+        company_id: Optional[UUID] = None,
+        cc_emails: Optional[List[str]] = None,
+        bcc_emails: Optional[List[str]] = None,
+        priority: int = 5
+    ) -> bool:
         """
-        Render email template with variables.
+        Send email using database template.
         
         Args:
-            template_html: HTML template string
-            variables: Dictionary of template variables
+            db: Database session
+            to_email: Recipient email
+            template_name: Name of template to use
+            context: Variables to replace in template (e.g., {"user_name": "John"})
+            company_id: Company ID for company-specific templates
+            cc_emails: CC recipients
+            bcc_emails: BCC recipients
+            priority: Email priority (1-10, 10 is highest)
             
         Returns:
-            Rendered HTML string
+            True if sent successfully, False otherwise
         """
-        template = Template(template_html)
-        return template.render(**variables)
+        # Get company info if company_id provided
+        company_name = "Everleap"
+        if company_id:
+            company_result = await db.execute(
+                select(Company).where(Company.id == company_id)
+            )
+            company = company_result.scalar_one_or_none()
+            if company:
+                company_name = company.name
+        
+        # Add default context variables
+        context.setdefault("company_name", company_name)
+        context.setdefault("logo_url", self.get_logo_url())
+        
+        # Get template
+        template = await self.get_template(db, template_name, company_id)
+        if not template:
+            raise ValueError(f"Email template '{template_name}' not found")
+        
+        # Render template
+        subject = self.render_template(template.subject, context)
+        body_html = self.render_template(template.body_html, context)
+        body_text = self.render_template(template.body_text or "", context)
+        
+        # Send email via SMTP
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            body_html=body_html,
+            body_text=body_text,
+            cc_emails=cc_emails,
+            bcc_emails=bcc_emails,
+            priority=priority
+        )
     
     async def send_welcome_email(
         self,

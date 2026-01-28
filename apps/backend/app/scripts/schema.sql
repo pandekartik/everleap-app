@@ -620,35 +620,134 @@ VALUES (
     false
 ) ON CONFLICT DO NOTHING;
 
--- Insert default email templates
+-- Insert default email templates with Everleap branding and logo
 INSERT INTO email_templates (company_id, template_name, subject, body_html, body_text, is_system, variables)
 VALUES
 (
     '00000000-0000-0000-0000-000000000000',
+    'email_verification',
+    'Verify Your Email - {{company_name}}',
+    '<div style="background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; padding: 40px 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <div style="text-align: center; margin-bottom: 32px;">
+       <img src="{{logo_url}}" alt="Everleap" style="height: 40px; width: auto;" />
+    </div>
+    <h1 style="color: #0f172a; font-size: 24px; font-weight: 600; margin-bottom: 24px; text-align: center;">Verify Your Email</h1>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 24px;">Hi {{user_name}},</p>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 32px;">Thank you for registering with <strong>{{company_name}}</strong>. Please verify your email address to complete your registration.</p>
+    <div style="text-align: center; margin-bottom: 32px;">
+      <a href="{{verification_link}}" style="background-color: #06bfb3; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Verify Email</a>
+    </div>
+    <p style="color: #64748b; font-size: 14px; line-height: 20px; margin-bottom: 0;">This link will expire in 24 hours. If you did not create an account, please ignore this email.</p>
+  </div>
+  <div style="text-align: center; margin-top: 24px; color: #64748b; font-size: 12px;">
+      &copy; 2026 {{company_name}}. All rights reserved.
+  </div>
+</div>',
+    'Hi {{user_name}}, Please verify your email address for {{company_name}}. Visit: {{verification_link}}',
+    true,
+    '["company_name", "user_name", "verification_link", "logo_url"]'::jsonb
+),
+(
+    '00000000-0000-0000-0000-000000000000',
+    'password_reset',
+    'Reset Your Password - {{company_name}}',
+    '<div style="background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; padding: 40px 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <div style="text-align: center; margin-bottom: 32px;">
+       <img src="{{logo_url}}" alt="Everleap" style="height: 40px; width: auto;" />
+    </div>
+    <h1 style="color: #0f172a; font-size: 24px; font-weight: 600; margin-bottom: 24px; text-align: center;">Reset Your Password</h1>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 24px;">Hi {{user_name}},</p>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 32px;">We received a request to reset your password for your <strong>{{company_name}}</strong> account.</p>
+    <div style="text-align: center; margin-bottom: 32px;">
+      <a href="{{reset_link}}" style="background-color: #06bfb3; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Reset Password</a>
+    </div>
+    <p style="color: #64748b; font-size: 14px; line-height: 20px; margin-bottom: 0;">This link will expire in 1 hour. If you did not request a password reset, please ignore this email.</p>
+  </div>
+  <div style="text-align: center; margin-top: 24px; color: #64748b; font-size: 12px;">
+      &copy; 2026 {{company_name}}. All rights reserved.
+  </div>
+</div>',
+    'Hi {{user_name}}, Reset your password for {{company_name}}. Visit: {{reset_link}}',
+    true,
+    '["company_name", "user_name", "reset_link", "logo_url"]'::jsonb
+),
+(
+    '00000000-0000-0000-0000-000000000000',
     'welcome_email',
     'Welcome to {{company_name}}!',
-    '<h1>Welcome {{user_name}}!</h1><p>You have been invited to join {{company_name}} on Everleap.</p><p>Please click the link below to set your password and get started:</p><p><a href="{{activation_link}}">Activate Account</a></p>',
+    '<div style="background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; padding: 40px 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <div style="text-align: center; margin-bottom: 32px;">
+       <img src="{{logo_url}}" alt="Everleap" style="height: 40px; width: auto;" />
+    </div>
+    <h1 style="color: #0f172a; font-size: 24px; font-weight: 600; margin-bottom: 24px; text-align: center;">Welcome to {{company_name}}!</h1>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 24px;">Hi {{user_name}},</p>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 32px;">You have been invited to join <strong>{{company_name}}</strong> on Everleap. We are excited to have you on board.</p>
+    <div style="text-align: center; margin-bottom: 32px;">
+      <a href="{{activation_link}}" style="background-color: #06bfb3; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Activate Account</a>
+    </div>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 0;">Please click the button above to set your password and get started.</p>
+  </div>
+  <div style="text-align: center; margin-top: 24px; color: #64748b; font-size: 12px;">
+      &copy; 2026 {{company_name}}. All rights reserved.
+  </div>
+</div>',
     'Welcome {{user_name}}! You have been invited to join {{company_name}} on Everleap. Please visit: {{activation_link}} to activate your account.',
     true,
-    '["company_name", "user_name", "activation_link"]'::jsonb
+    '["company_name", "user_name", "activation_link", "logo_url"]'::jsonb
 ),
 (
     '00000000-0000-0000-0000-000000000000',
     'application_received',
     'Application Received - {{job_title}}',
-    '<h2>Thank you for your application!</h2><p>Hi {{candidate_name}},</p><p>We have received your application for the position of {{job_title}} at {{company_name}}.</p><p>Our team will review your application and get back to you soon.</p>',
+    '<div style="background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; padding: 40px 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+     <div style="text-align: center; margin-bottom: 32px;">
+       <img src="{{logo_url}}" alt="{{company_name}}" style="height: 40px; width: auto;" />
+    </div>
+    <h2 style="color: #0f172a; font-size: 20px; font-weight: 600; margin-bottom: 16px;">Application Received</h2>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 16px;">Hi {{candidate_name}},</p>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 24px;">Thank you for applying for the <strong>{{job_title}}</strong> position at {{company_name}}. We have received your application and will review it shortly.</p>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 0;">We will be in touch with next steps.</p>
+  </div>
+  <div style="text-align: center; margin-top: 24px; color: #64748b; font-size: 12px;">
+      &copy; 2026 {{company_name}}. All rights reserved.
+  </div>
+</div>',
     'Thank you for your application! Hi {{candidate_name}}, We have received your application for {{job_title}} at {{company_name}}. Our team will review your application and get back to you soon.',
     true,
-    '["candidate_name", "job_title", "company_name"]'::jsonb
+    '["candidate_name", "job_title", "company_name", "logo_url"]'::jsonb
 ),
 (
     '00000000-0000-0000-0000-000000000000',
     'interview_scheduled',
     'Interview Scheduled - {{job_title}}',
-    '<h2>Interview Scheduled</h2><p>Hi {{candidate_name}},</p><p>Great news! We would like to invite you for an interview for the {{job_title}} position.</p><p><strong>Date & Time:</strong> {{interview_datetime}}</p><p><strong>Duration:</strong> {{duration}} minutes</p><p><strong>Meeting Link:</strong> <a href="{{meeting_link}}">Join Interview</a></p>',
+    '<div style="background-color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; padding: 40px 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+     <div style="text-align: center; margin-bottom: 32px;">
+       <img src="{{logo_url}}" alt="{{company_name}}" style="height: 40px; width: auto;" />
+    </div>
+    <h2 style="color: #0f172a; font-size: 20px; font-weight: 600; margin-bottom: 16px;">Interview Scheduled</h2>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 24px;">Hi {{candidate_name}},</p>
+    <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 24px;">Great news! We would like to invite you for an interview for the <strong>{{job_title}}</strong> position.</p>
+    <div style="background-color: #f1f5f9; padding: 24px; border-radius: 6px; margin-bottom: 32px;">
+      <p style="margin: 0 0 12px 0; color: #334155; font-size: 15px;"><strong>Date & Time:</strong> {{interview_datetime}}</p>
+      <p style="margin: 0 0 24px 0; color: #334155; font-size: 15px;"><strong>Duration:</strong> {{duration}} minutes</p>
+      <div style="text-align: center;">
+          <a href="{{meeting_link}}" style="background-color: #06bfb3; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Join Interview</a>
+      </div>
+    </div>
+     <p style="color: #334155; font-size: 16px; line-height: 24px; margin-bottom: 0;">Looking forward to speaking with you!</p>
+  </div>
+  <div style="text-align: center; margin-top: 24px; color: #64748b; font-size: 12px;">
+      &copy; 2026 {{company_name}}. All rights reserved.
+  </div>
+</div>',
     'Hi {{candidate_name}}, Great news! We would like to invite you for an interview for {{job_title}}. Date & Time: {{interview_datetime}}, Duration: {{duration}} minutes, Meeting Link: {{meeting_link}}',
     true,
-    '["candidate_name", "job_title", "interview_datetime", "duration", "meeting_link"]'::jsonb
+    '["candidate_name", "job_title", "interview_datetime", "duration", "meeting_link", "company_name", "logo_url"]'::jsonb
 ) ON CONFLICT DO NOTHING;
 
 -- Create indexes for full-text search
