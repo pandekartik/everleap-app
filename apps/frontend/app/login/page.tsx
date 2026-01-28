@@ -71,6 +71,8 @@ export default function LoginPage() {
                 phone: regPhone
             });
             setIsRegisterOpen(false);
+            setEmail(regEmail); // Pre-fill login email for convenience
+            toast.success("Account created successfully. Please log in with your email and password.");
         } catch (error) {
             // Error handled in provider
         } finally {

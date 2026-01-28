@@ -81,19 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const registerCandidate = async (registrationData: any) => {
         try {
-            const { data } = await api.post("/auth/register", registrationData);
-
-            localStorage.setItem("everleap_access_token", data.access_token);
-            localStorage.setItem("everleap_refresh_token", data.refresh_token);
-
-            // Re-fetch user to get full profile if needed, or assume data.user is returned if API changes.
-            // Based on schemas, register returns tokens. We might need to fetch /me or just trust tokens work.
-            // Let's fetch /me to be sure we have the user state correct.
-            const userResponse = await api.get("/auth/me");
-            setUser(userResponse.data);
-
-            router.push("/my-applications");
-            toast.success("Account created successfully!");
+            await api.post("/auth/register", registrationData);
+            // explicitely not logging in automatically as per new requirements
         } catch (error: any) {
             console.error("Registration failed", error);
             const message = error.response?.data?.detail || "Registration failed";
