@@ -5,7 +5,7 @@ import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from "@everle
 import { MapPin, Briefcase, Clock, DollarSign, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { MOCK_ROLES } from "@/lib/mock-data";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import ApplicationForm from "@/components/candidate/ApplicationForm";
 

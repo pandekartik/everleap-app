@@ -1,7 +1,7 @@
 "use client";
 
 import { Sidebar } from "./Sidebar";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 

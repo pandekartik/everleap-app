@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@everleap/design-system/lib/utils";
 import {
     LayoutDashboard,

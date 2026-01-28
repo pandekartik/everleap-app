@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { Button } from "@everleap/design-system";
 import { LogOut, User, Settings, HelpCircle } from "lucide-react";

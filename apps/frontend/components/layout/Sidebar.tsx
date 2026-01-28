@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@everleap/design-system/lib/utils";
 import { Button } from "@everleap/design-system";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/lib/auth";
 
 const NAV_ITEMS = [
     // COMMAND CENTER
@@ -63,7 +63,7 @@ export function Sidebar() {
     const { user, logout } = useAuth();
 
     // Default to strict empty if no user, but should be handled by Shell
-    const userRole = user?.role || "GUEST";
+    const userRole = user?.roles?.[0] || "GUEST";
 
     // Filter items based on role and determine which dividers to show
     const filteredItems = NAV_ITEMS.filter(item => {
@@ -130,8 +130,8 @@ export function Sidebar() {
                         alt="User"
                     />
                     <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-medium truncate">{user?.name || "Demo User"}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user?.role || "Guest"}</p>
+                        <p className="text-sm font-medium truncate">{user?.full_name || "Demo User"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user?.roles?.[0] || "Guest"}</p>
                     </div>
                 </div>
                 <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={logout}>

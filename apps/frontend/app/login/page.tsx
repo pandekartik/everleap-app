@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Input, Label } from "@everleap/design-system";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/lib/auth";
 import { ShieldCheck, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -118,6 +118,7 @@ export default function LoginPage() {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="email"
                                 disabled={isLoading}
                             />
                         </div>
@@ -133,6 +134,7 @@ export default function LoginPage() {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="current-password"
                                 disabled={isLoading}
                             />
                         </div>
@@ -182,6 +184,7 @@ export default function LoginPage() {
                                             placeholder="John Doe"
                                             value={regName}
                                             onChange={(e) => setRegName(e.target.value)}
+                                            autoComplete="name"
                                             required
                                         />
                                     </div>
@@ -193,6 +196,7 @@ export default function LoginPage() {
                                             type="email"
                                             value={regEmail}
                                             onChange={(e) => setRegEmail(e.target.value)}
+                                            autoComplete="email"
                                             required
                                         />
                                     </div>
@@ -203,6 +207,7 @@ export default function LoginPage() {
                                             placeholder="+1 (555) 000-0000"
                                             value={regPhone}
                                             onChange={(e) => setRegPhone(e.target.value)}
+                                            autoComplete="tel"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -212,6 +217,7 @@ export default function LoginPage() {
                                             type="password"
                                             value={regPassword}
                                             onChange={(e) => setRegPassword(e.target.value)}
+                                            autoComplete="new-password"
                                             required
                                         />
                                     </div>

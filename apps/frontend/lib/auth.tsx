@@ -14,6 +14,7 @@ export interface User {
     phone?: string;
     roles: UserRole[];
     company_id?: string;
+    avatarUrl?: string;
 }
 
 interface AuthContextType {

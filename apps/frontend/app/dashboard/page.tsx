@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, Button } from "@everleap/design-system";
 import {
     Users,
