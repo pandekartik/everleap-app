@@ -27,6 +27,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to normalize backend roles to frontend definitions
+const normalizeUser = (userData: any): User => {
+    if (!userData) return userData;
+    const roles = userData.roles || [];
+    const normalizedRoles = roles.map((r: string) => {
+        if (r === "ADMIN") return "ORG_ADMIN";
+        if (r === "HR") return "HR_ADMIN";
+        return r;
+    });
+    return { ...userData, roles: normalizedRoles };
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (token) {
                 try {
                     const { data } = await api.get("/auth/me");
-                    setUser(data);
+                    setUser(normalizeUser(data));
                 } catch (error: any) {
                     console.error("Failed to fetch user", error);
                     // Only clear token if it's a 401 or 403, otherwise it might be a network error
@@ -60,9 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem("everleap_access_token", data.access_token);
             localStorage.setItem("everleap_refresh_token", data.refresh_token);
 
-            setUser(data.user);
+            const normalizedUser = normalizeUser(data.user);
+            setUser(normalizedUser);
 
-            const roles = data.user.roles || [];
+            const roles = normalizedUser.roles || [];
             if (roles.includes("SUPER_ADMIN")) {
                 router.push("/platform-dashboard");
             } else if (roles.includes("CANDIDATE")) {
