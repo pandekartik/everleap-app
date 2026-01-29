@@ -36,7 +36,7 @@ export function ContentBlock({
                     <div className={`${align === "right" ? "lg:order-2" : "lg:order-1"}`}>
                         {(badge || step) && (
                             <div className="flex items-center gap-2 mb-6">
-                                {step && <span className="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded uppercase tracking-wider border border-teal-100">{step}</span>}
+                                {step && <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded uppercase tracking-wider border border-primary/20">{step}</span>}
                                 {badge && <Badge variant="outline" className="text-xs font-medium uppercase tracking-wider">{badge}</Badge>}
                             </div>
                         )}
@@ -53,8 +53,8 @@ export function ContentBlock({
                             <ul className="space-y-4">
                                 {checklist.map((item, i) => (
                                     <li key={i} className="flex items-start gap-3">
-                                        <div className="mt-1 h-5 w-5 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
-                                            <Check className="h-3 w-3 text-teal-600" />
+                                        <div className="mt-1 h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                            <Check className="h-3 w-3 text-primary" />
                                         </div>
                                         <span className="text-slate-700 font-medium">{item}</span>
                                     </li>

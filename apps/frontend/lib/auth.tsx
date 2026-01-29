@@ -70,12 +70,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const { data } = await api.post("/auth/login", { email, password });
 
+            // Store tokens first
             localStorage.setItem("everleap_access_token", data.access_token);
             localStorage.setItem("everleap_refresh_token", data.refresh_token);
 
-            const normalizedUser = normalizeUser(data.user);
+            // Fetch fresh user data using the new token (ensures consistency)
+            const { data: userData } = await api.get("/auth/me");
+            const normalizedUser = normalizeUser(userData);
             setUser(normalizedUser);
 
+            // Navigate based on role
             const roles = normalizedUser.roles || [];
             if (roles.includes("SUPER_ADMIN")) {
                 router.push("/platform-dashboard");

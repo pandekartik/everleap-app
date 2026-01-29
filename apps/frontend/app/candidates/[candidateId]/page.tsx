@@ -1,65 +1,104 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator } from "@everleap/design-system";
-import { ArrowLeft, Mail, Phone, Linkedin, Globe, MapPin, Calendar, Briefcase, GraduationCap, CheckCircle, XCircle, MessageSquare, Video, Download } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Linkedin, Globe, MapPin, Briefcase, GraduationCap, CheckCircle, XCircle, MessageSquare, Video, Download } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function CandidateDetailPage() {
     const params = useParams();
     const candidateId = params.candidateId as string;
     const [activeTab, setActiveTab] = useState("Overview");
+    const [candidate, setCandidate] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Mock candidate data
-    const candidate = {
-        id: candidateId,
-        name: "Sarah Chen",
-        email: "sarah.chen@email.com",
-        phone: "+1 (555) 123-4567",
-        location: "San Francisco, CA",
-        avatar: "https://i.pravatar.cc/150?u=sarah",
-        linkedin: "linkedin.com/in/sarahchen",
-        portfolio: "sarahchen.design",
-        appliedFor: "Senior Product Manager",
-        appliedDate: "Nov 18, 2026",
-        stage: "SCREENING",
-        matchScore: 92,
+    useEffect(() => {
+        const fetchCandidate = async () => {
+            try {
+                const { data } = await api.get(`/candidates/${candidateId}`);
 
-        // Resume parsing
-        experience: [
-            { title: "Product Manager", company: "TechCorp", duration: "2021 - Present", description: "Led product strategy for B2B SaaS platform serving 10k+ users" },
-            { title: "Associate PM", company: "StartupCo", duration: "2019 - 2021", description: "Managed feature development and user research" }
-        ],
-        education: [
-            { degree: "MBA", school: "Stanford GSB", year: "2019" },
-            { degree: "BS Computer Science", school: "UC Berkeley", year: "2017" }
-        ],
-        skills: ["Product Strategy", "SQL", "A/B Testing", "User Research", "Agile", "Data Analysis"],
+                // Transform API data to UI format
+                const parsed = data.parsed_data || {};
+                const name = parsed.name ? `${parsed.name.first} ${parsed.name.last || ''}` : (data.resume_filename || "Unknown");
 
-        // Screening
-        screeningQuestions: [
-            { question: "What's your experience with B2B SaaS products?", answer: "I've spent 4+ years working on B2B SaaS platforms, most recently at TechCorp where I led a product serving enterprise clients. I'm comfortable with complex user workflows and stakeholder management." },
-            { question: "Are you comfortable with SQL and data analysis?", answer: "Yes, I use SQL daily to analyze user behavior and make data-driven decisions. I'm proficient in writing complex queries and building dashboards." },
-            { question: "What's your expected salary range?", answer: "$140k - $160k" }
-        ],
+                setCandidate({
+                    id: data.application_id,
+                    name: name,
+                    email: parsed.email || "No email provided",
+                    phone: parsed.phone || "No phone provided",
+                    location: parsed.address?.city ? `${parsed.address.city}, ${parsed.address.country || ''}` : "Location not specified",
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+                    linkedin: parsed.linkedin_url || "",
+                    portfolio: parsed.website || "",
+                    appliedFor: data.job_title,
+                    appliedDate: format(new Date(data.applied_at), 'MMM d, yyyy'),
+                    stage: data.status,
+                    matchScore: data.ai_score ? Math.round(data.ai_score) : 0,
+                    resumeUrl: data.resume_url,
 
-        // AI Analysis
-        aiInsights: {
-            strengths: [
-                "Strong B2B SaaS experience matching role requirements",
-                "Proven track record of data-driven decision making",
-                "Educational background from top-tier institutions"
-            ],
-            concerns: [
-                "Salary expectation at upper end of budget",
-                "No direct mention of product-led growth experience"
-            ],
-            recommendation: "Strong candidate - recommend advancing to interview stage"
+                    // Resume parsing
+                    experience: parsed.work_experience?.map((exp: any) => ({
+                        title: exp.job_title || "Role not specified",
+                        company: exp.company || "Company not specified",
+                        duration: `${exp.start_date || ''} - ${exp.end_date || 'Present'}`,
+                        description: exp.description || ""
+                    })) || [],
+
+                    education: parsed.education?.map((edu: any) => ({
+                        degree: edu.degree || "Degree not specified",
+                        school: edu.school || "School not specified",
+                        year: edu.end_date || ""
+                    })) || [],
+
+                    skills: parsed.skills || [],
+
+                    // Screening (Mock for now if not in parsed data)
+                    screeningQuestions: data.screening_answers || [],
+
+                    // AI Analysis
+                    aiInsights: {
+                        strengths: parsed.ai_insights?.strengths || [],
+                        concerns: parsed.ai_insights?.weaknesses || [],
+                        recommendation: data.recommendation || "Pending AI Analysis"
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to fetch candidate:", error);
+                toast.error("Failed to load candidate details");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (candidateId) {
+            fetchCandidate();
         }
-    };
+    }, [candidateId]);
 
     const TABS = ["Overview", "Resume", "Screening", "AI Analysis"];
+
+    if (loading) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (!candidate) {
+        return (
+            <div className="p-8 text-center">
+                <h2 className="text-xl font-semibold mb-2">Candidate not found</h2>
+                <Link href="/candidates">
+                    <Button variant="outline">Back to Candidates</Button>
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 space-y-6">
@@ -77,7 +116,7 @@ export default function CandidateDetailPage() {
                     <img
                         src={candidate.avatar}
                         alt={candidate.name}
-                        className="h-20 w-20 rounded-full border-2 border-slate-100"
+                        className="h-20 w-20 rounded-full border-2 border-slate-100 object-cover"
                     />
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-slate-900">{candidate.name}</h1>
@@ -104,11 +143,11 @@ export default function CandidateDetailPage() {
                                 <div className="flex items-center gap-2">
                                     <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-emerald-500"
+                                            className={`h-full ${candidate.matchScore >= 70 ? 'bg-emerald-500' : candidate.matchScore >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
                                             style={{ width: `${candidate.matchScore}%` }}
                                         />
                                     </div>
-                                    <span className="text-sm font-semibold text-emerald-700">{candidate.matchScore}%</span>
+                                    <span className="text-sm font-semibold text-slate-700">{candidate.matchScore}%</span>
                                 </div>
                             </div>
                         </div>
@@ -117,10 +156,14 @@ export default function CandidateDetailPage() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Resume
-                    </Button>
+                    {candidate.resumeUrl && (
+                        <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm">
+                                <Download className="h-4 w-4 mr-2" />
+                                Resume
+                            </Button>
+                        </a>
+                    )}
                     <Button variant="outline" size="sm">
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Message
@@ -153,14 +196,16 @@ export default function CandidateDetailPage() {
                             <p className="text-slate-900 mt-0.5">{candidate.appliedDate}</p>
                         </div>
                         <div className="flex gap-3">
-                            <a href={`https://${candidate.linkedin}`} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm">
-                                    <Linkedin className="h-4 w-4 mr-2" />
-                                    LinkedIn
-                                </Button>
-                            </a>
+                            {candidate.linkedin && (
+                                <a href={candidate.linkedin.startsWith('http') ? candidate.linkedin : `https://${candidate.linkedin}`} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="outline" size="sm">
+                                        <Linkedin className="h-4 w-4 mr-2" />
+                                        LinkedIn
+                                    </Button>
+                                </a>
+                            )}
                             {candidate.portfolio && (
-                                <a href={`https://${candidate.portfolio}`} target="_blank" rel="noopener noreferrer">
+                                <a href={candidate.portfolio.startsWith('http') ? candidate.portfolio : `https://${candidate.portfolio}`} target="_blank" rel="noopener noreferrer">
                                     <Button variant="outline" size="sm">
                                         <Globe className="h-4 w-4 mr-2" />
                                         Portfolio
@@ -180,8 +225,8 @@ export default function CandidateDetailPage() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab
-                                    ? "border-primary text-primary"
-                                    : "border-transparent text-slate-600 hover:text-slate-900"
+                                ? "border-primary text-primary"
+                                : "border-transparent text-slate-600 hover:text-slate-900"
                                 }`}
                         >
                             {tab}
@@ -209,13 +254,17 @@ function OverviewTab({ candidate }: any) {
                     <CardTitle className="text-base">Skills</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                        {candidate.skills.map((skill: string) => (
-                            <Badge key={skill} variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                                {skill}
-                            </Badge>
-                        ))}
-                    </div>
+                    {candidate.skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                            {candidate.skills.map((skill: string) => (
+                                <Badge key={skill} variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                                    {skill}
+                                </Badge>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-slate-500 italic">No skills extracted</p>
+                    )}
                 </CardContent>
             </Card>
 
@@ -226,19 +275,21 @@ function OverviewTab({ candidate }: any) {
                 <CardContent className="space-y-3 text-sm">
                     <div className="flex justify-between">
                         <span className="text-slate-600">Total Experience</span>
-                        <span className="font-medium text-slate-900">5+ years</span>
+                        <span className="font-medium text-slate-900">
+                            {candidate.experience.length > 0 ? `${candidate.experience.length} roles found` : 'N/A'}
+                        </span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-slate-600">Current Role</span>
-                        <span className="font-medium text-slate-900">Product Manager</span>
+                        <span className="text-slate-600">Current/Latest Role</span>
+                        <span className="font-medium text-slate-900">
+                            {candidate.experience[0]?.title || 'N/A'}
+                        </span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-slate-600">Education</span>
-                        <span className="font-medium text-slate-900">MBA, Stanford</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-slate-600">Salary Expectation</span>
-                        <span className="font-medium text-slate-900">$140k - $160k</span>
+                        <span className="font-medium text-slate-900">
+                            {candidate.education[0]?.degree || 'N/A'}
+                        </span>
                     </div>
                 </CardContent>
             </Card>
@@ -249,23 +300,27 @@ function OverviewTab({ candidate }: any) {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {candidate.experience.slice(0, 2).map((exp: any, idx: number) => (
-                            <div key={idx} className="flex gap-4">
-                                <div className="mt-1">
-                                    <Briefcase className="h-5 w-5 text-slate-400" />
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <p className="font-semibold text-slate-900">{exp.title}</p>
-                                            <p className="text-sm text-slate-600">{exp.company}</p>
-                                        </div>
-                                        <span className="text-sm text-slate-500">{exp.duration}</span>
+                        {candidate.experience.length > 0 ? (
+                            candidate.experience.slice(0, 2).map((exp: any, idx: number) => (
+                                <div key={idx} className="flex gap-4">
+                                    <div className="mt-1">
+                                        <Briefcase className="h-5 w-5 text-slate-400" />
                                     </div>
-                                    <p className="text-sm text-slate-700 mt-2">{exp.description}</p>
+                                    <div className="flex-1">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <p className="font-semibold text-slate-900">{exp.title}</p>
+                                                <p className="text-sm text-slate-600">{exp.company}</p>
+                                            </div>
+                                            <span className="text-sm text-slate-500">{exp.duration}</span>
+                                        </div>
+                                        <p className="text-sm text-slate-700 mt-2">{exp.description}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <p className="text-sm text-slate-500 italic">No experience data available</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -274,6 +329,16 @@ function OverviewTab({ candidate }: any) {
 }
 
 function ResumeTab({ candidate }: any) {
+    if (candidate.experience.length === 0 && candidate.education.length === 0) {
+        return (
+            <Card className="border-slate-100 shadow-sm">
+                <CardContent className="py-8 text-center text-slate-500">
+                    No parsed resume data available.
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <Card className="border-slate-100 shadow-sm">
@@ -297,6 +362,7 @@ function ResumeTab({ candidate }: any) {
                             {idx < candidate.experience.length - 1 && <Separator className="mt-6" />}
                         </div>
                     ))}
+                    {candidate.experience.length === 0 && <p className="text-sm text-slate-500">No experience records found.</p>}
                 </CardContent>
             </Card>
 
@@ -317,6 +383,7 @@ function ResumeTab({ candidate }: any) {
                             <span className="text-slate-500 text-sm">{edu.year}</span>
                         </div>
                     ))}
+                    {candidate.education.length === 0 && <p className="text-sm text-slate-500">No education records found.</p>}
                 </CardContent>
             </Card>
         </div>
@@ -324,6 +391,16 @@ function ResumeTab({ candidate }: any) {
 }
 
 function ScreeningTab({ candidate }: any) {
+    if (candidate.screeningQuestions.length === 0) {
+        return (
+            <Card className="border-slate-100 shadow-sm">
+                <CardContent className="py-8 text-center text-slate-500">
+                    No screening questions or answers found.
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <div className="space-y-4">
             {candidate.screeningQuestions.map((item: any, idx: number) => (
@@ -348,6 +425,16 @@ function ScreeningTab({ candidate }: any) {
 }
 
 function AIAnalysisTab({ candidate }: any) {
+    if (!candidate.aiInsights || (candidate.aiInsights.strengths.length === 0 && candidate.aiInsights.concerns.length === 0)) {
+        return (
+            <Card className="border-slate-100 shadow-sm">
+                <CardContent className="py-8 text-center text-slate-500">
+                    AI Analysis not available for this candidate yet.
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <Card className="border-emerald-100 bg-emerald-50/50 shadow-sm">

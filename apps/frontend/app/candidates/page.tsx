@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge, Card, CardContent, CardHeader, CardTitle } from "@everleap/design-system";
-import { Search, Filter, Download, MessageSquare, Calendar, Users, TrendingUp, Clock, Target, LayoutList, LayoutGrid, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
-import { MOCK_CANDIDATES, CandidateStatus } from "@/lib/mock-data";
+import { Search, Filter, Download, MessageSquare, Calendar, Users, TrendingUp, Clock, Target, LayoutList, LayoutGrid, ChevronDown, ChevronUp, ArrowUpDown, Loader2 } from "lucide-react";
 import { cn } from "@everleap/design-system/lib/utils";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function CandidatesPage() {
     const router = useRouter();
@@ -16,14 +18,48 @@ export default function CandidatesPage() {
     const [sortBy, setSortBy] = useState<"name" | "role" | "stage" | "score" | "applied">("applied");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+    // Data state
+    const [candidates, setCandidates] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCandidates = async () => {
+            try {
+                const { data } = await api.get("/candidates");
+                // Transform API data to match UI needs
+                const transformedCandidates = data.candidates.map((c: any) => ({
+                    id: c.application_id, // Use application_id for navigation
+                    name: c.parsed_data?.name?.first ? `${c.parsed_data.name.first} ${c.parsed_data.name.last || ''}` : (c.resume_filename || "Unknown"),
+                    email: c.parsed_data?.email || "No email",
+                    role: c.job_title,
+                    stage: c.status || 'APPLIED',
+                    score: c.ai_score ? Math.round(c.ai_score) : 0,
+                    appliedDate: format(new Date(c.applied_at), 'MMM d, yyyy'),
+                    avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(c.parsed_data?.name?.first || 'U')}&background=random`,
+                    rawDate: new Date(c.applied_at) // For sorting
+                }));
+                setCandidates(transformedCandidates);
+            } catch (error) {
+                console.error("Failed to fetch candidates:", error);
+                toast.error("Failed to load candidates");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCandidates();
+    }, []);
+
     // Calculate stats
-    const totalCandidates = MOCK_CANDIDATES.length;
-    const inInterview = MOCK_CANDIDATES.filter(c => c.stage === "INTERVIEW").length;
-    const avgScore = Math.round(MOCK_CANDIDATES.reduce((sum, c) => sum + c.score, 0) / totalCandidates);
-    const topMatches = MOCK_CANDIDATES.filter(c => c.score >= 90).length;
+    const totalCandidates = candidates.length;
+    const inInterview = candidates.filter(c => c.stage === "INTERVIEW").length;
+    const avgScore = totalCandidates > 0
+        ? Math.round(candidates.reduce((sum, c) => sum + c.score, 0) / totalCandidates)
+        : 0;
+    const topMatches = candidates.filter(c => c.score >= 90).length;
 
     // Filter and sort candidates
-    const filteredCandidates = MOCK_CANDIDATES.filter(candidate => {
+    const filteredCandidates = candidates.filter(candidate => {
         const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             candidate.role.toLowerCase().includes(searchTerm.toLowerCase());
@@ -45,7 +81,7 @@ export default function CandidatesPage() {
                 comparison = a.score - b.score;
                 break;
             case "applied":
-                comparison = new Date(a.appliedDate).getTime() - new Date(b.appliedDate).getTime();
+                comparison = a.rawDate.getTime() - b.rawDate.getTime();
                 break;
         }
         return sortOrder === "asc" ? comparison : -comparison;
@@ -86,6 +122,14 @@ export default function CandidatesPage() {
         setExpandedJobs(newExpanded);
     };
 
+    if (loading) {
+        return (
+            <div className="flex h-96 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -122,10 +166,6 @@ export default function CandidatesPage() {
                             By Job
                         </button>
                     </div>
-                    <Button>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export All
-                    </Button>
                 </div>
             </div>
 
@@ -134,28 +174,28 @@ export default function CandidatesPage() {
                 <MetricCard
                     title="Total Candidates"
                     value={totalCandidates.toString()}
-                    trend="+12% from last month"
+                    trend="Active Pool"
                     icon={Users}
-                    trendColor="text-emerald-600"
+                    trendColor="text-slate-600"
                 />
                 <MetricCard
                     title="In Interview"
                     value={inInterview.toString()}
-                    trend="Active pipeline"
+                    trend="Active Pipeline"
                     icon={Calendar}
                     trendColor="text-blue-600"
                 />
                 <MetricCard
                     title="Avg. Match Score"
                     value={`${avgScore}%`}
-                    trend="AI rating"
+                    trend="AI Rating"
                     icon={Target}
                     trendColor="text-slate-600"
                 />
                 <MetricCard
                     title="Top Matches (90%+)"
                     value={topMatches.toString()}
-                    trend="High potential"
+                    trend="High Potential"
                     icon={TrendingUp}
                     trendColor="text-emerald-600"
                 />
@@ -189,10 +229,6 @@ export default function CandidatesPage() {
                             <option value="REJECTED">Rejected</option>
                         </select>
                         <Button variant="outline" size="sm" className="text-slate-600">
-                            <Filter className="h-4 w-4 mr-2" />
-                            More Filters
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-slate-600">
                             <Download className="h-4 w-4 mr-2" />
                             Export
                         </Button>
@@ -225,7 +261,15 @@ export default function CandidatesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredCandidates.length === 0 ? (
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-12">
+                                        <div className="flex justify-center">
+                                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredCandidates.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-12 text-slate-500">
                                         No candidates found matching your criteria
@@ -240,11 +284,18 @@ export default function CandidatesPage() {
                                     >
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <img
-                                                    src={candidate.avatarUrl}
-                                                    alt={candidate.name}
-                                                    className="h-10 w-10 rounded-full bg-slate-100 object-cover"
-                                                />
+                                                <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
+                                                    <img
+                                                        src={candidate.avatarUrl}
+                                                        alt={candidate.name}
+                                                        className="h-full w-full object-cover"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.style.display = 'none';
+                                                            target.parentElement!.innerHTML = `<span class="text-xs font-semibold text-slate-600">${candidate.name.charAt(0)}</span>`;
+                                                        }}
+                                                    />
+                                                </div>
                                                 <div>
                                                     <p className="font-medium text-slate-900">{candidate.name}</p>
                                                     <p className="text-xs text-slate-500">{candidate.email}</p>
@@ -268,7 +319,7 @@ export default function CandidatesPage() {
                                         </TableCell>
                                         <TableCell className="text-slate-600 text-sm">{candidate.appliedDate}</TableCell>
                                         <TableCell>
-                                            <div className="flex items-center justify-end gap-1">
+                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
                                                     <MessageSquare className="h-4 w-4" />
                                                 </Button>
@@ -283,17 +334,14 @@ export default function CandidatesPage() {
                         </TableBody>
                     </Table>
 
-                    {/* Pagination */}
-                    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/30">
-                        <div className="text-sm text-slate-600">
-                            Showing <span className="font-medium">{filteredCandidates.length}</span> of <span className="font-medium">{totalCandidates}</span> candidates
+                    {/* Pagination - Simplified for MVP */}
+                    {filteredCandidates.length > 0 && (
+                        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/30">
+                            <div className="text-sm text-slate-600">
+                                Showing <span className="font-medium">{filteredCandidates.length}</span> of <span className="font-medium">{totalCandidates}</span> candidates
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" size="sm" disabled>Previous</Button>
-                            <Button variant="outline" size="sm" className="bg-primary text-primary-foreground border-primary hover:bg-primary/90">1</Button>
-                            <Button variant="outline" size="sm">Next</Button>
-                        </div>
-                    </div>
+                    )}
                 </Card>
             ) : (
                 /* By Job View */
@@ -305,7 +353,7 @@ export default function CandidatesPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        Object.entries(candidatesByJob).map(([jobRole, candidates]) => (
+                        Object.entries(candidatesByJob).map(([jobRole, candidates]: [string, any[]]) => (
                             <Card key={jobRole} className="border-slate-100 shadow-sm overflow-hidden">
                                 <button
                                     onClick={() => toggleJob(jobRole)}
@@ -351,11 +399,18 @@ export default function CandidatesPage() {
                                                     >
                                                         <TableCell>
                                                             <div className="flex items-center gap-3">
-                                                                <img
-                                                                    src={candidate.avatarUrl}
-                                                                    alt={candidate.name}
-                                                                    className="h-10 w-10 rounded-full bg-slate-100 object-cover"
-                                                                />
+                                                                <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
+                                                                    <img
+                                                                        src={candidate.avatarUrl}
+                                                                        alt={candidate.name}
+                                                                        className="h-full w-full object-cover"
+                                                                        onError={(e) => {
+                                                                            const target = e.target as HTMLImageElement;
+                                                                            target.style.display = 'none';
+                                                                            target.parentElement!.innerHTML = `<span class="text-xs font-semibold text-slate-600">${candidate.name.charAt(0)}</span>`;
+                                                                        }}
+                                                                    />
+                                                                </div>
                                                                 <div>
                                                                     <p className="font-medium text-slate-900">{candidate.name}</p>
                                                                     <p className="text-xs text-slate-500">{candidate.email}</p>
@@ -381,9 +436,6 @@ export default function CandidatesPage() {
                                                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
                                                                     <MessageSquare className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
-                                                                    <Calendar className="h-4 w-4" />
                                                                 </Button>
                                                             </div>
                                                         </TableCell>
@@ -421,8 +473,8 @@ function MetricCard({ title, value, trend, icon: Icon, trendColor }: any) {
     );
 }
 
-function StageBadge({ stage }: { stage: CandidateStatus }) {
-    const styles = {
+function StageBadge({ stage }: { stage: string }) {
+    const styles: Record<string, string> = {
         APPLIED: "bg-slate-100 text-slate-700 border-slate-200",
         SCREENING: "bg-blue-50 text-blue-700 border-blue-200",
         INTERVIEW: "bg-amber-50 text-amber-700 border-amber-200",
@@ -432,7 +484,7 @@ function StageBadge({ stage }: { stage: CandidateStatus }) {
     };
 
     return (
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles[stage]}`}>
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles[stage] || styles.APPLIED}`}>
             {stage}
         </span>
     );

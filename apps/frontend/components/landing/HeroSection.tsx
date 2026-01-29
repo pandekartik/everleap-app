@@ -15,8 +15,8 @@ export function HeroSection() {
                 <div className="mb-8 flex justify-center">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-slate-200 bg-white shadow-sm transition-transform hover:scale-105 cursor-default">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                         </span>
                         <span className="text-sm font-medium text-slate-600">Now available in public beta</span>
                     </div>
@@ -25,7 +25,7 @@ export function HeroSection() {
                 {/* Salix-style Typography: Heavy, tight */}
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-slate-900 mb-8 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
                     Meet your autonomous <br />
-                    <span className="text-teal-600">HR team.</span>
+                    <span className="text-primary">HR team.</span>
                 </h1>
 
                 <p className="text-xl md:text-2xl text-slate-500 mb-12 max-w-2xl mx-auto leading-relaxed font-light animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both">
@@ -36,9 +36,9 @@ export function HeroSection() {
                 {/* Salix-style CTA: Pill, Glow */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both">
                     <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="absolute -inset-1 bg-gradient-to-r from-primary to-blue-400 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
                         <DemoRequestModal>
-                            <Button size="lg" className="relative h-14 px-10 text-lg rounded-full bg-teal-600 hover:bg-teal-700 text-white shadow-xl">
+                            <Button size="lg" className="relative h-14 px-10 text-lg rounded-full bg-primary hover:bg-primary/90 text-white shadow-xl">
                                 Request a demo
                             </Button>
                         </DemoRequestModal>

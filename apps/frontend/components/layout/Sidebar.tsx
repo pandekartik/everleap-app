@@ -6,17 +6,16 @@ import {
     LayoutDashboard,
     Briefcase,
     Users,
-    Calendar,
-    FileSignature,
     Building2,
     BarChart3,
+    CreditCard,
     Settings,
     LogOut
 } from "lucide-react";
 import { cn } from "@everleap/design-system/lib/utils";
 import {
     Button,
-    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@everleap/design-system";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
@@ -30,11 +29,6 @@ const NAV_ITEMS = [
     { name: "Jobs", href: "/hiring", icon: Briefcase, roles: ["HR_ADMIN", "RECRUITER"], section: "hiring" },
     { name: "Candidates", href: "/candidates", icon: Users, roles: ["HR_ADMIN", "RECRUITER"], section: "hiring" },
 
-    // PIPELINE
-    { type: "divider", section: "pipeline", label: "PIPELINE", roles: ["HR_ADMIN", "INTERVIEWER"] },
-    { name: "Interviews", href: "/interviews", icon: Calendar, roles: ["HR_ADMIN", "INTERVIEWER"], section: "pipeline" },
-    { name: "Offers", href: "/offers", icon: FileSignature, roles: ["HR_ADMIN"], section: "pipeline" },
-
     // PLATFORM ADMIN
     { type: "divider", section: "platform", label: "PLATFORM", roles: ["SUPER_ADMIN"] },
     { name: "Dashboard", href: "/platform-dashboard", icon: LayoutDashboard, roles: ["SUPER_ADMIN"], section: "platform" },
@@ -43,8 +37,8 @@ const NAV_ITEMS = [
 
     // BILLING & PLANS
     { type: "divider", section: "billing", label: "BILLING & PLANS", roles: ["SUPER_ADMIN"] },
-    { name: "Plans", href: "/plans", icon: FileSignature, roles: ["SUPER_ADMIN"], section: "billing" },
-    { name: "Coupons", href: "/coupons", icon: FileSignature, roles: ["SUPER_ADMIN"], section: "billing" },
+    { name: "Plans", href: "/plans", icon: CreditCard, roles: ["SUPER_ADMIN"], section: "billing" },
+    { name: "Coupons", href: "/coupons", icon: CreditCard, roles: ["SUPER_ADMIN"], section: "billing" },
 
     // CANDIDATE NAVIGATION
     { type: "divider", section: "candidate", label: "MY APPLICATIONS", roles: ["CANDIDATE"] },
@@ -58,8 +52,7 @@ const NAV_ITEMS = [
     // ORG ADMIN ONLY
     { type: "divider", section: "org-admin", label: "ORGANIZATION", roles: ["ORG_ADMIN"] },
     { name: "Employees", href: "/employees", icon: Building2, roles: ["ORG_ADMIN"], section: "org-admin" },
-    { name: "Billing & Plans", href: "/billing", icon: FileSignature, roles: ["ORG_ADMIN"], section: "org-admin" },
-    { name: "Reports", href: "/reports", icon: BarChart3, roles: ["ORG_ADMIN"], section: "org-admin" },
+    { name: "Billing & Plans", href: "/billing", icon: CreditCard, roles: ["ORG_ADMIN"], section: "org-admin" },
 ];
 
 export function Sidebar() {

@@ -1,33 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card, CardContent, Badge } from "@everleap/design-system";
-import { ArrowLeft, Edit, Pause, Play, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Pause, Play, Trash2, Globe, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 const TABS = ["Setup", "Candidates", "Activity"];
 
 export default function JobDetailPage() {
     const params = useParams();
+    const router = useRouter();
     const jobId = params.jobId as string;
     const [activeTab, setActiveTab] = useState("Setup");
+    const [job, setJob] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [candidates, setCandidates] = useState<any[]>([]);
 
-    // Mock job data
-    const job = {
-        id: jobId,
-        title: "Senior Product Manager",
-        department: "Product",
-        location: "San Francisco, CA",
-        status: "OPEN",
-        createdDate: "Nov 15, 2026",
-        candidateCount: 12,
-        description: "We're looking for an experienced Product Manager to lead our core product initiatives...",
-        responsibilities: "• Lead product strategy\n• Collaborate with engineering\n• Drive user research",
-        requiredSkills: "Product management, SQL, A/B testing",
-        salary: "$120,000 - $150,000",
-        equity: "0.10%"
+    useEffect(() => {
+        const fetchJob = async () => {
+            try {
+                // Fetch job details
+                const { data: jobData } = await api.get(`/jobs/${jobId}`);
+                setJob(jobData);
+
+                // Fetch candidates
+                // Note: Currently fetching all candidates and filtering client-side
+                // In future, backend should support filtering by job_id
+                const { data: candidatesData } = await api.get("/candidates");
+                const jobCandidates = candidatesData.candidates.filter((c: any) => c.job_id === jobId);
+                setCandidates(jobCandidates);
+            } catch (error) {
+                console.error("Failed to fetch job details:", error);
+                toast.error("Failed to load job details");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (jobId) {
+            fetchJob();
+        }
+    }, [jobId]);
+
+    const handlePublish = async () => {
+        try {
+            await api.post(`/jobs/${jobId}/publish`);
+            toast.success("Job published successfully and posted to LinkedIn");
+            // Refresh job data
+            const { data } = await api.get(`/jobs/${jobId}`);
+            setJob(data);
+        } catch (error) {
+            console.error("Failed to publish job:", error);
+            toast.error("Failed to publish job");
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="p-8 flex items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (!job) {
+        return (
+            <div className="p-8 text-center">
+                <h2 className="text-xl font-semibold mb-2">Job not found</h2>
+                <Link href="/hiring">
+                    <Button variant="outline">Back to Jobs</Button>
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 space-y-6">
@@ -43,27 +92,47 @@ export default function JobDetailPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{job.title}</h1>
-                        <Badge className={
-                            job.status === "OPEN"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 border"
-                                : "bg-slate-100 text-slate-700 border-slate-200 border"
-                        }>
-                            {job.status}
-                        </Badge>
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{job.job_title}</h1>
+                        <StatusBadge status={job.status} />
                     </div>
                     <p className="text-slate-500 mt-2">
-                        {job.department} • {job.location} • Created {job.createdDate}
+                        {job.department} • {job.location} • Created {format(new Date(job.created_at), 'MMM d, yyyy')}
                     </p>
+                    {job.unique_job_code && (
+                        <p className="text-xs text-slate-400 mt-1 font-mono">
+                            ID: {job.unique_job_code}
+                        </p>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
+                    {/* View Public Page Button */}
+                    {job.is_published && job.unique_job_code && (
+                        <Link
+                            href={`https://everleap-demo.com/careers/${job.unique_job_code}`}
+                            target="_blank"
+                        >
+                            <Button variant="outline" size="sm">
+                                <Globe className="h-4 w-4 mr-2" />
+                                View Public Page
+                            </Button>
+                        </Link>
+                    )}
+
+                    {!job.is_published ? (
+                        <Button size="sm" onClick={handlePublish}>
+                            <Play className="h-4 w-4 mr-2" />
+                            Publish Job
+                        </Button>
+                    ) : (
+                        <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-700">
+                            <Pause className="h-4 w-4 mr-2" />
+                            Pause Hiring
+                        </Button>
+                    )}
+
                     <Button variant="outline" size="sm">
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
-                    </Button>
-                    <Button variant="outline" size="sm">
-                        <Pause className="h-4 w-4 mr-2" />
-                        Pause
                     </Button>
                 </div>
             </div>
@@ -76,14 +145,14 @@ export default function JobDetailPage() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab
-                                    ? "border-primary text-primary"
-                                    : "border-transparent text-slate-600 hover:text-slate-900"
+                                ? "border-primary text-primary"
+                                : "border-transparent text-slate-600 hover:text-slate-900"
                                 }`}
                         >
                             {tab}
                             {tab === "Candidates" && (
                                 <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 text-xs text-slate-700">
-                                    {job.candidateCount}
+                                    {candidates.length}
                                 </span>
                             )}
                         </button>
@@ -94,14 +163,50 @@ export default function JobDetailPage() {
             {/* Tab Content */}
             <div>
                 {activeTab === "Setup" && <SetupTab job={job} />}
-                {activeTab === "Candidates" && <CandidatesTab jobId={jobId} />}
+                {activeTab === "Candidates" && <CandidatesTab candidates={candidates} />}
                 {activeTab === "Activity" && <ActivityTab jobId={jobId} />}
             </div>
         </div>
     );
 }
 
+function StatusBadge({ status }: { status: string }) {
+    if (status === 'published') {
+        return (
+            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 border">
+                Published
+            </Badge>
+        );
+    }
+    if (status === 'draft') {
+        return (
+            <Badge className="bg-slate-100 text-slate-700 border-slate-200 border">
+                Draft
+            </Badge>
+        );
+    }
+    return (
+        <Badge variant="secondary">
+            {status}
+        </Badge>
+    );
+}
+
 function SetupTab({ job }: any) {
+    // Format currency
+    const formatCurrency = (amount: number, currency: string) => {
+        if (!amount) return 'N/A';
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency || 'USD',
+            maximumFractionDigits: 0
+        }).format(amount);
+    };
+
+    const salaryRange = job.compensation_min && job.compensation_max
+        ? `${formatCurrency(job.compensation_min, job.currency)} - ${formatCurrency(job.compensation_max, job.currency)}`
+        : 'Not specified';
+
     return (
         <div className="grid gap-6 md:grid-cols-2">
             <Card className="border-slate-100 shadow-sm">
@@ -109,11 +214,12 @@ function SetupTab({ job }: any) {
                     <div>
                         <h3 className="font-semibold text-slate-900 mb-3">Basic Information</h3>
                         <div className="space-y-3 text-sm">
-                            <InfoRow label="Job Title" value={job.title} />
-                            <InfoRow label="Department" value={job.department} />
-                            <InfoRow label="Location" value={job.location} />
-                            <InfoRow label="Compensation" value={job.salary} />
-                            <InfoRow label="Equity" value={job.equity} />
+                            <InfoRow label="Job Title" value={job.job_title} />
+                            <InfoRow label="Department" value={job.department || 'N/A'} />
+                            <InfoRow label="Location" value={job.location || 'Remote'} />
+                            <InfoRow label="Employment Type" value={job.employment_type?.replace('_', ' ') || 'N/A'} />
+                            <InfoRow label="Compensation" value={salaryRange} />
+                            <InfoRow label="Equity" value={job.equity || 'None'} />
                         </div>
                     </div>
                 </CardContent>
@@ -122,11 +228,12 @@ function SetupTab({ job }: any) {
             <Card className="border-slate-100 shadow-sm">
                 <CardContent className="pt-6 space-y-4">
                     <div>
-                        <h3 className="font-semibold text-slate-900 mb-3">Requirements</h3>
+                        <h3 className="font-semibold text-slate-900 mb-3">Settings</h3>
                         <div className="space-y-3 text-sm">
-                            <InfoRow label="Required Skills" value={job.requiredSkills} />
+                            <InfoRow label="Remote" value={job.is_remote ? "Yes" : "No"} />
+                            <InfoRow label="Direct Post" value={job.direct_job_post ? "Yes" : "No"} />
                             <InfoRow label="Status" value={job.status} />
-                            <InfoRow label="Posted" value={job.createdDate} />
+                            <InfoRow label="Posted" value={format(new Date(job.created_at), 'MMM d, yyyy')} />
                         </div>
                     </div>
                 </CardContent>
@@ -135,35 +242,56 @@ function SetupTab({ job }: any) {
             <Card className="border-slate-100 shadow-sm md:col-span-2">
                 <CardContent className="pt-6">
                     <h3 className="font-semibold text-slate-900 mb-3">Job Description</h3>
-                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                        {job.description}
-                    </p>
+                    {job.description ? (
+                        <div
+                            className="text-sm text-slate-700 leading-relaxed prose max-w-none"
+                            dangerouslySetInnerHTML={{ __html: job.description.replace(/\n/g, '<br/>') }}
+                        />
+                    ) : (
+                        <p className="text-sm text-slate-400 italic">No description available.</p>
+                    )}
 
-                    <h3 className="font-semibold text-slate-900 mt-6 mb-3">Key Responsibilities</h3>
-                    <p className="text-sm text-slate-700 whitespace-pre-line">
-                        {job.responsibilities}
-                    </p>
+                    {job.screening_questions && job.screening_questions.length > 0 && (
+                        <>
+                            <h3 className="font-semibold text-slate-900 mt-6 mb-3">Screening Questions</h3>
+                            <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
+                                {job.screening_questions.map((q: any, i: number) => (
+                                    <li key={i}>{q.question}</li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
                 </CardContent>
             </Card>
         </div>
     );
 }
 
-function CandidatesTab({ jobId }: { jobId: string }) {
-    // Mock candidates by stage
+function CandidatesTab({ candidates }: { candidates: any[] }) {
+    if (!candidates || candidates.length === 0) {
+        return (
+            <Card className="border-slate-100 shadow-sm">
+                <CardContent className="py-12 flex flex-col items-center justify-center text-center">
+                    <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                        <CheckCircle2 className="h-6 w-6 text-slate-300" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-900">No candidates yet</h3>
+                    <p className="text-slate-500 max-w-sm mt-1">
+                        Candidates who apply to this job will appear here. Publish your job to start receiving applications.
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // Determine stage based on status
+    // MOCK: Distributing candidates into stages for demo if real stage missing
     const pipeline = {
-        applied: [
-            { id: 1, name: "Rohan Gupta", avatar: "https://i.pravatar.cc/150?u=1", score: 95 },
-            { id: 2, name: "Sarah Chen", avatar: "https://i.pravatar.cc/150?u=2", score: 88 }
-        ],
-        screening: [
-            { id: 3, name: "Priya Sharma", avatar: "https://i.pravatar.cc/150?u=3", score: 92 }
-        ],
-        interview: [
-            { id: 4, name: "Michael Brown", avatar: "https://i.pravatar.cc/150?u=4", score: 85 }
-        ],
-        offer: [],
-        hired: []
+        applied: candidates.filter(c => !c.status || c.status === 'APPLIED'),
+        screening: candidates.filter(c => c.status === 'SCREENING'),
+        interview: candidates.filter(c => c.status === 'INTERVIEW'),
+        offer: candidates.filter(c => c.status === 'OFFER'),
+        hired: candidates.filter(c => c.status === 'HIRED')
     };
 
     return (
@@ -184,60 +312,54 @@ function StageColumn({ title, count, candidates }: any) {
                 <h3 className="font-semibold text-sm text-slate-700">{title}</h3>
                 <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{count}</span>
             </div>
-            <div className="space-y-2 min-h-[400px] bg-slate-50/50 rounded-lg p-3">
-                {candidates.map((candidate: any) => (
-                    <Card key={candidate.id} className="border-slate-200 shadow-none hover:shadow-sm transition-shadow cursor-pointer">
-                        <CardContent className="p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                                <img
-                                    src={candidate.avatar}
-                                    alt={candidate.name}
-                                    className="h-8 w-8 rounded-full"
-                                />
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm text-slate-900 truncate">{candidate.name}</p>
+            <div className="space-y-2 min-h-[200px] bg-slate-50/50 rounded-lg p-3">
+                {candidates.map((candidate: any) => {
+                    // Extract name/email from parsed_data or fallback
+                    const name = candidate.parsed_data?.name?.first ?
+                        `${candidate.parsed_data.name.first} ${candidate.parsed_data.name.last || ''}` :
+                        (candidate.resume_filename || 'Unknown Candidate');
+                    const score = candidate.ai_score ? Math.round(candidate.ai_score) : 0;
+
+                    return (
+                        <Card key={candidate.application_id} className="border-slate-200 shadow-none hover:shadow-sm transition-shadow cursor-pointer">
+                            <CardContent className="p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-xs">
+                                        {name.charAt(0)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm text-slate-900 truncate">{name}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-emerald-500"
-                                        style={{ width: `${candidate.score}%` }}
-                                    />
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full ${score >= 70 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                            style={{ width: `${score}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-xs font-medium text-slate-600">{score}%</span>
                                 </div>
-                                <span className="text-xs font-medium text-slate-600">{candidate.score}%</span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                            </CardContent>
+                        </Card>
+                    );
+                })}
             </div>
         </div>
     );
 }
 
 function ActivityTab({ jobId }: { jobId: string }) {
+    // Mock activities for now since backend activity log isn't fully ready
     const activities = [
-        { id: 1, action: "Job posted to LinkedIn", time: "2 hours ago", type: "system" },
-        { id: 2, action: "AI screened 15 new applicants", time: "4 hours ago", type: "ai" },
-        { id: 3, action: "Sent rejection emails to 3 candidates", time: "1 day ago", type: "system" },
-        { id: 4, action: "Job posted to company career page", time: "2 days ago", type: "system" },
-        { id: 5, action: "AI sourced 50 profiles from GitHub", time: "3 days ago", type: "ai" }
+        { id: 1, action: "Job details viewed", time: "Just now", type: "system" },
     ];
 
     return (
         <Card className="border-slate-100 shadow-sm">
             <CardContent className="pt-6">
-                <div className="space-y-4">
-                    {activities.map((activity) => (
-                        <div key={activity.id} className="flex gap-4 pb-4 border-b border-slate-100 last:border-0">
-                            <div className={`mt-1 h-2 w-2 rounded-full ${activity.type === "ai" ? "bg-primary" : "bg-slate-300"
-                                }`} />
-                            <div className="flex-1">
-                                <p className="text-sm text-slate-900">{activity.action}</p>
-                                <p className="text-xs text-slate-500 mt-1">{activity.time}</p>
-                            </div>
-                        </div>
-                    ))}
+                <div className="text-center text-slate-500 py-6 text-sm">
+                    No recent activity to show.
                 </div>
             </CardContent>
         </Card>
@@ -248,7 +370,8 @@ function InfoRow({ label, value }: { label: string, value: string }) {
     return (
         <div className="flex justify-between">
             <span className="text-slate-600">{label}</span>
-            <span className="font-medium text-slate-900">{value}</span>
+            <span className="font-medium text-slate-900 truncate max-w-[200px] text-right" title={value}>{value}</span>
         </div>
     );
 }
+

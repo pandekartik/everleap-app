@@ -11,7 +11,7 @@ import { DemoRequestModal } from "@/components/landing/DemoRequestModal";
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-white font-sans selection:bg-teal-100 selection:text-teal-900">
+        <div className="min-h-screen bg-white font-sans selection:bg-primary/20 selection:text-primary">
             <LandingNavbar />
 
             <main>
@@ -190,7 +190,7 @@ export default function LandingPage() {
                 />
 
                 {/* Human in the Loop Declaration */}
-                <section id="philosophy" className="py-32 bg-teal-900 relative overflow-hidden">
+                <section id="philosophy" className="py-32 bg-[#000926] relative overflow-hidden">
                     {/* ... content ... */}
                 </section>
 
@@ -202,7 +202,7 @@ export default function LandingPage() {
                         </h2>
                         <div className="flex justify-center gap-4">
                             <DemoRequestModal>
-                                <Button size="lg" className="h-14 px-10 text-lg rounded-full bg-teal-600 hover:bg-teal-700 text-white shadow-xl shadow-teal-900/10">Request a demo</Button>
+                                <Button size="lg" className="h-14 px-10 text-lg rounded-full bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20">Request a demo</Button>
                             </DemoRequestModal>
                         </div>
                     </div>

@@ -1,41 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Input, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@everleap/design-system";
-import { Search, Filter, Download, Eye, Edit, Briefcase, Users, Clock, TrendingUp, Plus, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
+import { Search, Filter, Download, Eye, Edit, Briefcase, Users, Clock, TrendingUp, Plus, ChevronUp, ChevronDown, ArrowUpDown, Loader2, ExternalLink } from "lucide-react";
 import { StatusBadge } from "@/components/hiring/StatusBadge";
-import { MOCK_ROLES } from "@/lib/mock-data";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import type { PaginatedJobResponse, JobListItem } from "@/lib/types";
 
 export default function HiringPage() {
     const router = useRouter();
+    const { user } = useAuth();
+    const [jobs, setJobs] = useState<JobListItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState<"id" | "title" | "department" | "location" | "date" | "status">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalJobs, setTotalJobs] = useState(0);
+
+    // Fetch jobs from API
+    useEffect(() => {
+        const fetchJobs = async () => {
+            if (!user?.company_id) return;
+
+            try {
+                setIsLoading(true);
+                const params: any = {
+                    page,
+                    page_size: 25,
+                };
+
+                if (statusFilter !== "all") {
+                    params.status = statusFilter;
+                }
+
+                const { data } = await api.get<PaginatedJobResponse>("/jobs", { params });
+                setJobs(data.items);
+                setTotalJobs(data.total);
+                setTotalPages(data.total_pages);
+            } catch (error: any) {
+                console.error("Failed to fetch jobs:", error);
+                toast.error(error.response?.data?.detail || "Failed to load jobs");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchJobs();
+    }, [user?.company_id, page, statusFilter]);
 
     // Calculate stats
-    const totalJobs = MOCK_ROLES.length;
-    const openJobs = MOCK_ROLES.filter(r => r.status === "OPEN").length;
-    const totalCandidates = MOCK_ROLES.reduce((sum, job) => sum + job.candidateCount, 0);
-    const avgTimeToHire = 18; // Mock value
+    const openJobs = jobs.filter(j => j.is_published && j.status === "published").length;
+    const totalCandidates = jobs.reduce((sum, job) => sum + job.total_applications, 0);
+    const avgTimeToHire = 18; // TODO: Calculate from actual data
 
-    // Filter and sort jobs
-    const filteredJobs = MOCK_ROLES.filter(job => {
-        const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    // Client-side filter and sort
+    const filteredJobs = jobs.filter(job => {
+        const matchesSearch = job.job_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
             job.location.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === "all" || job.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        return matchesSearch;
     }).sort((a, b) => {
         let comparison = 0;
         switch (sortBy) {
             case "id":
-                comparison = a.id.localeCompare(b.id);
+                comparison = a.unique_job_code.localeCompare(b.unique_job_code);
                 break;
             case "title":
-                comparison = a.title.localeCompare(b.title);
+                comparison = a.job_title.localeCompare(b.job_title);
                 break;
             case "department":
                 comparison = a.department.localeCompare(b.department);
@@ -44,7 +82,7 @@ export default function HiringPage() {
                 comparison = a.location.localeCompare(b.location);
                 break;
             case "date":
-                comparison = new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime();
+                comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
                 break;
             case "status":
                 comparison = a.status.localeCompare(b.status);
@@ -86,7 +124,7 @@ export default function HiringPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
                 <MetricCard
                     title="Total Jobs"
                     value={totalJobs.toString()}
@@ -108,48 +146,20 @@ export default function HiringPage() {
                     icon={Users}
                     trendColor="text-emerald-600"
                 />
-                <MetricCard
-                    title="Avg. Time to Fill"
-                    value={`${avgTimeToHire}d`}
-                    trend="-2 days improvement"
-                    icon={Clock}
-                    trendColor="text-emerald-600"
-                />
             </div>
 
-            {/* Filters and Search */}
+            {/* Search Only */}
             <Card className="border-slate-100 shadow-sm">
                 <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                                type="search"
-                                placeholder="Search by title, department, or location..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 bg-white border-slate-200"
-                            />
-                        </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="h-9 px-3 rounded-md border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="OPEN">Open</option>
-                            <option value="CLOSED">Closed</option>
-                            <option value="PAUSED">Paused</option>
-                            <option value="DRAFT">Draft</option>
-                        </select>
-                        <Button variant="outline" size="sm" className="text-slate-600">
-                            <Filter className="h-4 w-4 mr-2" />
-                            More Filters
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-slate-600">
-                            <Download className="h-4 w-4 mr-2" />
-                            Export
-                        </Button>
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                            type="search"
+                            placeholder="Search by title, department, or location..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 bg-white border-slate-200"
+                        />
                     </div>
                 </CardContent>
             </Card>
@@ -182,49 +192,96 @@ export default function HiringPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredJobs.length === 0 ? (
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={8} className="text-center py-12">
+                                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                                    <p className="text-slate-500 mt-2">Loading jobs...</p>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredJobs.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                                    No jobs found matching your criteria
+                                    {jobs.length === 0 ? "No jobs yet. Create your first job to get started!" : "No jobs found matching your criteria"}
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredJobs.map((job) => (
-                                <TableRow
-                                    key={job.id}
-                                    className="border-slate-100 group hover:bg-slate-50/50 cursor-pointer"
-                                    onClick={() => router.push(`/hiring/${job.id}`)}
-                                >
-                                    <TableCell className="font-mono text-xs text-slate-500">{job.id}</TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <p className="font-semibold text-slate-900">{job.title}</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">Posted by {job.createdBy}</p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-slate-700">{job.department}</TableCell>
-                                    <TableCell className="text-slate-700">{job.location}</TableCell>
-                                    <TableCell className="text-slate-600 text-sm">{job.createdDate}</TableCell>
-                                    <TableCell className="text-center">
-                                        <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                                            {job.candidateCount}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <StatusBadge status={job.status} />
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10">
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                            filteredJobs.map((job) => {
+                                const createdDate = new Date(job.created_at).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                });
+
+                                return (
+                                    <TableRow
+                                        key={job.id}
+                                        className="border-slate-100 group hover:bg-slate-50/50 cursor-pointer"
+                                        onClick={() => router.push(`/hiring/${job.id}`)}
+                                    >
+                                        <TableCell className="font-mono text-xs text-slate-500">{job.unique_job_code}</TableCell>
+                                        <TableCell>
+                                            <div>
+                                                <p className="font-semibold text-slate-900">{job.job_title}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">{job.employment_type.replace('_', ' ')}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-slate-700">{job.department}</TableCell>
+                                        <TableCell className="text-slate-700">
+                                            {job.location}{job.is_remote && " (Remote)"}
+                                        </TableCell>
+                                        <TableCell className="text-slate-600 text-sm">{createdDate}</TableCell>
+                                        <TableCell className="text-center">
+                                            <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                                                {job.total_applications}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge status={job.status} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {(job.status === "published" || job.is_published) && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(`${window.location.origin}/jobs/${job.unique_job_code}`, '_blank');
+                                                        }}
+                                                    >
+                                                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                                                        View URL
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        router.push(`/hiring/${job.id}`);
+                                                    }}
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        router.push(`/hiring/${job.id}/edit`);
+                                                    }}
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
@@ -235,11 +292,37 @@ export default function HiringPage() {
                         Showing <span className="font-medium">{filteredJobs.length}</span> of <span className="font-medium">{totalJobs}</span> jobs
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" disabled>Previous</Button>
-                        <Button variant="outline" size="sm" className="bg-primary text-primary-foreground border-primary hover:bg-primary/90">1</Button>
-                        <Button variant="outline" size="sm">2</Button>
-                        <Button variant="outline" size="sm">3</Button>
-                        <Button variant="outline" size="sm">Next</Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page === 1 || isLoading}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                        >
+                            Previous
+                        </Button>
+                        {totalPages > 0 && Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                            const pageNum = Math.max(1, Math.min(totalPages - 2, page - 1)) + i;
+                            return (
+                                <Button
+                                    key={pageNum}
+                                    variant="outline"
+                                    size="sm"
+                                    className={pageNum === page ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90" : ""}
+                                    onClick={() => setPage(pageNum)}
+                                    disabled={isLoading}
+                                >
+                                    {pageNum}
+                                </Button>
+                            );
+                        })}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page >= totalPages || isLoading}
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        >
+                            Next
+                        </Button>
                     </div>
                 </div>
             </Card>

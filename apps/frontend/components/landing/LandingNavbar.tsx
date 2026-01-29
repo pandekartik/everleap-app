@@ -53,7 +53,7 @@ export function LandingNavbar() {
                         </Button>
                     </Link>
                     <DemoRequestModal>
-                        <Button size="sm" className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl px-5">
+                        <Button size="sm" className="bg-primary hover:bg-primary/90 text-white rounded-xl px-5">
                             Request a demo
                         </Button>
                     </DemoRequestModal>
@@ -104,7 +104,7 @@ export function LandingNavbar() {
                             <Button variant="ghost" className="w-full justify-start">Login</Button>
                         </Link>
                         <DemoRequestModal>
-                            <Button className="w-full bg-teal-600 text-white rounded-xl">Request a demo</Button>
+                            <Button className="w-full bg-primary text-white rounded-xl">Request a demo</Button>
                         </DemoRequestModal>
                     </div>
                 </div>

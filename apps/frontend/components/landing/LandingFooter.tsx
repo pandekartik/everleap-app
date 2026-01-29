@@ -22,10 +22,10 @@ export function LandingFooter() {
                     <div>
                         <h4 className="font-semibold text-slate-900 mb-4">Company</h4>
                         <ul className="space-y-3 text-sm text-slate-600">
-                            <li><Link href="/about" className="hover:text-teal-600 transition-colors">About</Link></li>
-                            <li><Link href="/contact" className="hover:text-teal-600 transition-colors">Contact</Link></li>
-                            <li><Link href="/privacy" className="hover:text-teal-600 transition-colors">Privacy Policy</Link></li>
-                            <li><Link href="/terms" className="hover:text-teal-600 transition-colors">Terms and Conditions</Link></li>
+                            <li><Link href="/about" className="hover:text-primary transition-colors">About</Link></li>
+                            <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
+                            <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                            <li><Link href="/terms" className="hover:text-primary transition-colors">Terms and Conditions</Link></li>
                         </ul>
                     </div>
                 </div>

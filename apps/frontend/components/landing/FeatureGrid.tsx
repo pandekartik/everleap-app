@@ -25,9 +25,9 @@ export function FeatureGrid({ features, className = "" }: FeatureGridProps) {
             {features.map((feature, i) => {
                 const Icon = ICON_MAP[feature.icon] || Question;
                 return (
-                    <div key={i} className="group p-6 rounded-2xl border border-slate-200 bg-white hover:border-teal-100 hover:shadow-lg hover:shadow-teal-900/5 transition-all duration-300">
-                        <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center mb-6 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-300">
-                            <Icon weight="duotone" className="h-6 w-6 text-teal-600" />
+                    <div key={i} className="group p-6 rounded-2xl border border-slate-200 bg-white hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
+                        <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                            <Icon weight="duotone" className="h-6 w-6 text-primary" />
                         </div>
                         <h4 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h4>
                         <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>

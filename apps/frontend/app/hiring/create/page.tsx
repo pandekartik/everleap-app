@@ -6,6 +6,52 @@ import { ChevronRight, Check, Briefcase, Sparkles, ExternalLink, Loader2, ArrowL
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { ORG_SETTINGS } from "@/lib/org-settings";
+
+// Utility functions for number formatting
+function formatNumberWithCommas(value: string): string {
+    const num = value.replace(/,/g, '');
+    if (!num || isNaN(Number(num))) return value;
+    return Number(num).toLocaleString('en-US');
+}
+
+function numberToWords(num: number): string {
+    if (num === 0) return 'Zero';
+
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+
+    function convertHundreds(n: number): string {
+        if (n === 0) return '';
+        if (n < 10) return ones[n];
+        if (n < 20) return teens[n - 10];
+        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+        return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertHundreds(n % 100) : '');
+    }
+
+    if (num < 1000) return convertHundreds(num);
+    if (num < 1000000) {
+        const thousands = Math.floor(num / 1000);
+        const remainder = num % 1000;
+        return convertHundreds(thousands) + ' Thousand' + (remainder !== 0 ? ' ' + convertHundreds(remainder) : '');
+    }
+    if (num < 1000000000) {
+        const millions = Math.floor(num / 1000000);
+        let remainder = num % 1000000;
+        let result = convertHundreds(millions) + ' Million';
+        if (remainder >= 1000) {
+            const thousands = Math.floor(remainder / 1000);
+            result += ' ' + convertHundreds(thousands) + ' Thousand';
+            remainder = remainder % 1000;
+        }
+        if (remainder !== 0) result += ' ' + convertHundreds(remainder);
+        return result;
+    }
+    return num.toLocaleString();
+}
 
 const STEPS = [
     { id: 1, name: "Basic Info", description: "Job details and location" },
@@ -17,18 +63,26 @@ const STEPS = [
 
 export default function CreateJobPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
     const [publishProgress, setPublishProgress] = useState<string[]>([]);
+    const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+
+    // New States
+    const [showEquity, setShowEquity] = useState(false);
+    const [inputMethod, setInputMethod] = useState<'ai' | 'manual' | 'upload'>('ai');
+
     const [formData, setFormData] = useState({
         title: "",
         department: "",
         location: "",
         isRemote: false,
-        employmentType: "full-time",
+        employmentType: "FULL_TIME",
         salaryMin: "",
         salaryMax: "",
+        currency: "USD", // Default
         equity: "",
         description: "",
         responsibilities: "",
@@ -38,71 +92,165 @@ export default function CreateJobPage() {
         linkedinUrl: ""
     });
 
+    // Fetch company settings for currency
+    useEffect(() => {
+        const fetchCompanySettings = async () => {
+            if (user?.company_id) {
+                try {
+                    // Assuming we have an endpoint or we get it from Profile/Orgs. 
+                    // Using a direct fetch or user's org data if available.
+                    // For now, defaulting to USD but checking if we can get it.
+                    const { data } = await api.get(`/companies/${user.company_id}`);
+                    if (data && data.currency) {
+                        setFormData(prev => ({ ...prev, currency: data.currency }));
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch company settings", e);
+                }
+            }
+        };
+        fetchCompanySettings();
+    }, [user?.company_id]);
+
     const updateField = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    // Handle file upload for JD
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.type === "text/plain" || file.name.endsWith(".md")) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target?.result as string;
+                    setFormData(prev => ({ ...prev, description: text }));
+                    toast.success("Job description loaded from file");
+                };
+                reader.readAsText(file);
+            } else {
+                toast.error("Format not supported for direct preview. Please paste the text.");
+            }
+        }
+    };
+
     const handleGenerateJD = async () => {
+        if (!user?.company_id) {
+            toast.error("User company not found");
+            return;
+        }
+
         setIsGenerating(true);
+        setCurrentStep(2);
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // Prepare payload - only include fields that have values
+            const payload: any = {
+                job_title: formData.title,
+                employment_type: formData.employmentType,
+                location: formData.location,
+                is_remote: formData.isRemote,
+                currency: "USD",
+                direct_job_post: false, // AI will generate description
+            };
 
-        updateField("description", `We're looking for an exceptional ${formData.title} to join our ${formData.department} team. This role offers the opportunity to work with cutting-edge technology and collaborate with a talented team of professionals.\n\nAs a key member of our organization, you'll have the autonomy to drive meaningful impact while working in a ${formData.isRemote ? 'fully remote' : formData.location} environment.`);
+            // Add optional fields only if they have values
+            if (formData.department) payload.department = formData.department;
+            if (formData.salaryMin) payload.compensation_min = parseInt(formData.salaryMin);
+            if (formData.salaryMax) payload.compensation_max = parseInt(formData.salaryMax);
+            if (formData.equity) payload.equity = formData.equity;
 
-        updateField("responsibilities", `• Lead and execute strategic initiatives for ${formData.department}\n• Collaborate cross-functionally with engineering, design, and business teams\n• Drive data-informed decision making and optimize key metrics\n• Mentor junior team members and contribute to team growth\n• Own end-to-end delivery of high-impact projects`);
+            // Create job with AI generation
+            const { data } = await api.post("/jobs", payload);
 
-        updateField("requirements", `• 5+ years of experience in a similar role\n• Strong analytical and problem-solving skills\n• Excellent communication and stakeholder management\n• Experience with agile methodologies\n• Bachelor's degree in relevant field or equivalent experience`);
+            setCreatedJobId(data.id);
 
-        updateField("screeningQuestions", [
-            "What interests you most about this role?",
-            "Describe your experience with similar projects or responsibilities.",
-            "What is your expected salary range?",
-            "What is your availability to start?"
-        ]);
+            // AI has generated the job description, fetch it
+            const { data: jobDetails } = await api.get(`/jobs/${data.id}`);
 
-        setIsGenerating(false);
-        setCurrentStep(3);
+            updateField("description", jobDetails.job_description || "");
+            // Note: Backend doesn't return separate responsibilities/requirements fields
+            // They're part of job_description
+
+            setIsGenerating(false);
+            setCurrentStep(3);
+            toast.success("Job description generated successfully!");
+        } catch (error: any) {
+            console.error("Failed to create job:", error);
+            const errorMessage = error.response?.data?.detail ||
+                (Array.isArray(error.response?.data) ? error.response.data[0]?.msg : null) ||
+                "Failed to generate job description";
+            toast.error(errorMessage);
+            setIsGenerating(false);
+            setCurrentStep(1);
+        }
     };
 
     const handlePublish = async () => {
+        if (!createdJobId) {
+            toast.error("Job not created yet");
+            return;
+        }
+
+        // Validate that we have a job description
+        if (!formData.description) {
+            toast.error("Cannot publish job without a description. Please wait for AI generation to complete.");
+            return;
+        }
+
         setIsPublishing(true);
         setCurrentStep(4);
         setPublishProgress([]);
 
-        const steps = [
-            { message: "Creating job posting...", delay: 800 },
-            { message: "Publishing to company website...", delay: 1200 },
-            { message: "Posting to LinkedIn...", delay: 1500 },
-            { message: "Activating candidate sourcing...", delay: 1000 },
-            { message: "Job is now live! 🎉", delay: 500 }
-        ];
+        try {
+            // Update progress
+            setPublishProgress(prev => [...prev, "Preparing job posting..."]);
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-        for (const step of steps) {
-            await new Promise(resolve => setTimeout(resolve, step.delay));
-            setPublishProgress(prev => [...prev, step.message]);
+            // Publish the job
+            setPublishProgress(prev => [...prev, "Publishing to career page..."]);
+            const { data } = await api.post(`/jobs/${createdJobId}/publish`, {
+                post_to_linkedin: true // You can make this configurable
+            });
+
+            setPublishProgress(prev => [...prev, "Publishing to LinkedIn..."]);
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            setPublishProgress(prev => [...prev, "Activating candidate sourcing..."]);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            setPublishProgress(prev => [...prev, "Job is now live! 🎉"]);
+
+            // Update URLs
+            updateField("websiteUrl", data.career_page_url || "");
+            updateField("linkedinUrl", data.linkedin_url || "");
+
+            setIsPublishing(false);
+            setCurrentStep(5);
+            toast.success("Job published successfully!");
+        } catch (error: any) {
+            console.error("Failed to publish job:", error);
+            console.error("Error response:", error.response?.data);
+            const errorMessage = error.response?.data?.detail ||
+                (Array.isArray(error.response?.data) ? error.response.data[0]?.msg : null) ||
+                "Failed to publish job";
+            toast.error(errorMessage);
+            setIsPublishing(false);
+            setCurrentStep(3);
         }
-
-        const jobId = `JOB-${Math.floor(Math.random() * 10000)}`;
-        updateField("websiteUrl", `https://careers.everleap.com/jobs/${jobId}`);
-        updateField("linkedinUrl", `https://linkedin.com/jobs/view/${Math.floor(Math.random() * 100000000)}`);
-
-        setIsPublishing(false);
-        setCurrentStep(5);
-
-        toast.success("Job published successfully!");
     };
 
     const handleComplete = () => {
-        router.push(`/hiring/JOB-${Math.floor(Math.random() * 10000)}`);
+        if (createdJobId) {
+            router.push(`/hiring/${createdJobId}`);
+        } else {
+            router.push("/hiring");
+        }
     };
 
     const handleNext = () => {
         if (currentStep === 1) {
             setCurrentStep(2);
-            // Auto-start AI generation
-            setTimeout(() => {
-                handleGenerateJD();
-            }, 100);
         } else if (currentStep === 3) {
             handlePublish();
         }
@@ -174,9 +322,25 @@ export default function CreateJobPage() {
                     {/* Step Content */}
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 min-h-[600px]">
                         {currentStep === 1 && (
-                            <BasicInfoStep formData={formData} updateField={updateField} />
+                            <BasicInfoStep
+                                formData={formData}
+                                updateField={updateField}
+                                showEquity={showEquity}
+                                setShowEquity={setShowEquity}
+                            />
                         )}
-                        {(currentStep === 2 || isGenerating) && (
+                        {(currentStep === 2 && !isGenerating) && (
+                            <InputMethodStep
+                                formData={formData}
+                                updateField={updateField}
+                                inputMethod={inputMethod}
+                                setInputMethod={setInputMethod}
+                                onGenerate={handleGenerateJD}
+                                handleFileUpload={handleFileUpload}
+                                onNext={() => setCurrentStep(3)}
+                            />
+                        )}
+                        {(currentStep === 2 && isGenerating) && (
                             <GeneratingStep />
                         )}
                         {currentStep === 3 && (
@@ -205,6 +369,12 @@ export default function CreateJobPage() {
                                 <ChevronRight className="ml-2 h-4 w-4" />
                             </Button>
                         )}
+                        {currentStep === 2 && inputMethod !== 'ai' && (
+                            <Button onClick={() => setCurrentStep(3)} size="lg" disabled={!formData.description}>
+                                Continue to Review
+                                <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                        )}
                         {currentStep === 3 && (
                             <Button onClick={handleNext} disabled={isPublishing} size="lg">
                                 <Briefcase className="mr-2 h-4 w-4" />
@@ -224,7 +394,106 @@ export default function CreateJobPage() {
 }
 
 // Step Components (same as before but without dialog context)
-function BasicInfoStep({ formData, updateField }: any) {
+function InputMethodStep({ formData, updateField, inputMethod, setInputMethod, onGenerate, handleFileUpload, onNext }: any) {
+    return (
+        <div className="space-y-6">
+            <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-slate-900">Job Description</h3>
+                <p className="text-slate-600 mt-2">How would you like to create the job description?</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-8">
+                <button
+                    onClick={() => setInputMethod('ai')}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${inputMethod === 'ai'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                >
+                    <div className="flex items-center gap-2 font-semibold text-slate-900 mb-1">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Generate with AI
+                    </div>
+                    <p className="text-xs text-slate-500">Auto-generate from title</p>
+                </button>
+                <button
+                    onClick={() => setInputMethod('manual')}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${inputMethod === 'manual'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                >
+                    <div className="flex items-center gap-2 font-semibold text-slate-900 mb-1">
+                        <Briefcase className="h-4 w-4 text-blue-600" />
+                        Paste / Write
+                    </div>
+                    <p className="text-xs text-slate-500">Manually enter details</p>
+                </button>
+                <button
+                    onClick={() => setInputMethod('upload')}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${inputMethod === 'upload'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                >
+                    <div className="flex items-center gap-2 font-semibold text-slate-900 mb-1">
+                        <div className="h-4 w-4 flex items-center justify-center rounded-full border border-slate-400">
+                            <span className="text-[10px] font-bold">↑</span>
+                        </div>
+                        Upload File
+                    </div>
+                    <p className="text-xs text-slate-500">Import from file</p>
+                </button>
+            </div>
+
+            {inputMethod === 'ai' && (
+                <div className="text-center py-10 space-y-6 animate-in fade-in duration-300">
+                    <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Sparkles className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="max-w-md mx-auto">
+                        <p className="text-slate-600 text-lg">
+                            We'll generate a comprehensive description for <span className="font-semibold text-slate-900">{formData.title}</span> using industry best practices.
+                        </p>
+                    </div>
+                    <Button onClick={onGenerate} size="lg" className="mt-4">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Generate Description
+                    </Button>
+                </div>
+            )}
+
+            {(inputMethod === 'manual' || inputMethod === 'upload') && (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                    {inputMethod === 'upload' && (
+                        <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-center mb-4">
+                            <p className="text-sm text-slate-600 mb-2">Upload a text or markdown file (.txt, .md)</p>
+                            <Input
+                                type="file"
+                                accept=".txt,.md"
+                                onChange={handleFileUpload}
+                                className="max-w-xs mx-auto"
+                            />
+                            <p className="text-xs text-slate-400 mt-2">PDF/Docx parsing coming soon. For now, please paste text below.</p>
+                        </div>
+                    )}
+
+                    <div>
+                        <Label htmlFor="manual-desc">Job Description</Label>
+                        <textarea
+                            id="manual-desc"
+                            value={formData.description}
+                            onChange={(e) => updateField("description", e.target.value)}
+                            placeholder="Paste or write your job description here..."
+                            className="mt-1.5 w-full min-h-[300px] px-4 py-3 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary leading-relaxed"
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+function BasicInfoStep({ formData, updateField, showEquity, setShowEquity }: any) {
     return (
         <div className="space-y-6">
             <div>
@@ -253,11 +522,9 @@ function BasicInfoStep({ formData, updateField }: any) {
                             className="mt-1.5 w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">Select department</option>
-                            <option value="Engineering">Engineering</option>
-                            <option value="Product">Product</option>
-                            <option value="Design">Design</option>
-                            <option value="Marketing">Marketing</option>
-                            <option value="Sales">Sales</option>
+                            {ORG_SETTINGS.departments.map((dept) => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
                         </select>
                     </div>
                     <div>
@@ -268,9 +535,10 @@ function BasicInfoStep({ formData, updateField }: any) {
                             onChange={(e) => updateField("employmentType", e.target.value)}
                             className="mt-1.5 w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         >
-                            <option value="full-time">Full-time</option>
-                            <option value="part-time">Part-time</option>
-                            <option value="contract">Contract</option>
+                            <option value="FULL_TIME">Full-time</option>
+                            <option value="PART_TIME">Part-time</option>
+                            <option value="CONTRACT">Contract</option>
+                            <option value="INTERNSHIP">Internship</option>
                         </select>
                     </div>
                 </div>
@@ -302,31 +570,73 @@ function BasicInfoStep({ formData, updateField }: any) {
                 <h3 className="text-xl font-semibold text-slate-900 mb-6">Compensation</h3>
                 <div className="space-y-4">
                     <div>
-                        <Label>Salary Range (USD)</Label>
+                        <Label>Salary Range ({formData.currency})</Label>
                         <div className="grid grid-cols-2 gap-4 mt-1.5">
-                            <Input
-                                type="number"
-                                value={formData.salaryMin}
-                                onChange={(e) => updateField("salaryMin", e.target.value)}
-                                placeholder="Min (e.g. 100000)"
-                            />
-                            <Input
-                                type="number"
-                                value={formData.salaryMax}
-                                onChange={(e) => updateField("salaryMax", e.target.value)}
-                                placeholder="Max (e.g. 150000)"
-                            />
+                            <div>
+                                <Input
+                                    type="text"
+                                    value={formData.salaryMin ? formatNumberWithCommas(formData.salaryMin) : ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/,/g, '');
+                                        if (value === '' || /^\d+$/.test(value)) {
+                                            updateField("salaryMin", value);
+                                        }
+                                    }}
+                                    placeholder="Min (e.g. 100,000)"
+                                />
+                                {formData.salaryMin && !isNaN(Number(formData.salaryMin)) && Number(formData.salaryMin) > 0 && (
+                                    <p className="text-xs text-slate-500 mt-1.5">
+                                        {numberToWords(Number(formData.salaryMin))} {formData.currency === "USD" ? "Dollars" : formData.currency}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Input
+                                    type="text"
+                                    value={formData.salaryMax ? formatNumberWithCommas(formData.salaryMax) : ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/,/g, '');
+                                        if (value === '' || /^\d+$/.test(value)) {
+                                            updateField("salaryMax", value);
+                                        }
+                                    }}
+                                    placeholder="Max (e.g. 150,000)"
+                                />
+                                {formData.salaryMax && !isNaN(Number(formData.salaryMax)) && Number(formData.salaryMax) > 0 && (
+                                    <p className="text-xs text-slate-500 mt-1.5">
+                                        {numberToWords(Number(formData.salaryMax))} {formData.currency === "USD" ? "Dollars" : formData.currency}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div>
-                        <Label htmlFor="equity">Equity (%)</Label>
-                        <Input
-                            id="equity"
-                            value={formData.equity}
-                            onChange={(e) => updateField("equity", e.target.value)}
-                            placeholder="e.g. 0.05"
-                            className="mt-1.5"
-                        />
+                        <div className="flex items-center gap-2 mb-2">
+                            <input
+                                type="checkbox"
+                                id="showEquity"
+                                checked={showEquity}
+                                onChange={(e) => {
+                                    setShowEquity(e.target.checked);
+                                    if (!e.target.checked) updateField("equity", "");
+                                }}
+                                className="rounded border-slate-300"
+                            />
+                            <Label htmlFor="showEquity" className="font-normal cursor-pointer select-none">Include Equity Offering</Label>
+                        </div>
+
+                        {showEquity && (
+                            <div>
+                                <Label htmlFor="equity">Equity (%)</Label>
+                                <Input
+                                    id="equity"
+                                    value={formData.equity}
+                                    onChange={(e) => updateField("equity", e.target.value)}
+                                    placeholder="e.g. 0.05 - 0.1%"
+                                    className="mt-1.5"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

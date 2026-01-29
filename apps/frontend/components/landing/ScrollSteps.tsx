@@ -95,11 +95,11 @@ export function ScrollStepper({ steps, id }: ScrollStepperProps) {
                                     }`}
                             >
                                 <div className="flex items-center gap-2 mb-6">
-                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${activeStep === index ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-400"
+                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${activeStep === index ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
                                         }`}>
                                         {index + 1}
                                     </div>
-                                    <Badge variant="outline" className={`text-xs uppercase tracking-wider ${activeStep === index ? "text-teal-700 border-teal-200" : "text-slate-400 border-slate-200"
+                                    <Badge variant="outline" className={`text-xs uppercase tracking-wider ${activeStep === index ? "text-primary border-primary/20" : "text-slate-400 border-slate-200"
                                         }`}>
                                         {step.badge}
                                     </Badge>
@@ -118,7 +118,7 @@ export function ScrollStepper({ steps, id }: ScrollStepperProps) {
                                     <div className="text-center text-slate-400">
                                         {(() => {
                                             const StepIcon = ICON_MAP[step.icon] || FileText;
-                                            return <StepIcon weight="duotone" className="h-12 w-12 mx-auto mb-4 text-teal-500 opacity-80" />;
+                                            return <StepIcon weight="duotone" className="h-12 w-12 mx-auto mb-4 text-primary opacity-80" />;
                                         })()}
                                         <p className="text-base font-semibold text-slate-600 mb-1">{step.placeholderLabel}</p>
                                         <p className="text-xs text-slate-400 uppercase tracking-widest">Live Preview</p>
@@ -128,9 +128,9 @@ export function ScrollStepper({ steps, id }: ScrollStepperProps) {
                                 <ul className="space-y-4">
                                     {step.checklist.map((item, i) => (
                                         <li key={i} className="flex items-start gap-3">
-                                            <div className={`mt-1 h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${activeStep === index ? "bg-teal-100" : "bg-slate-100"
+                                            <div className={`mt-1 h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${activeStep === index ? "bg-primary/10" : "bg-slate-100"
                                                 }`}>
-                                                <Check weight="bold" className={`h-3 w-3 ${activeStep === index ? "text-teal-600" : "text-slate-400"}`} />
+                                                <Check weight="bold" className={`h-3 w-3 ${activeStep === index ? "text-primary" : "text-slate-400"}`} />
                                             </div>
                                             <span className={`font-medium ${activeStep === index ? "text-slate-700" : "text-slate-500"}`}>
                                                 {item}
@@ -168,7 +168,7 @@ export function ScrollStepper({ steps, id }: ScrollStepperProps) {
                                     ) : (
                                         <div className="w-full h-full bg-white rounded-2xl border border-slate-100 shadow-lg flex items-center justify-center">
                                             <div className="text-center text-slate-400">
-                                                <StepIcon weight="duotone" className="h-16 w-16 mx-auto mb-6 text-teal-500 opacity-80" />
+                                                <StepIcon weight="duotone" className="h-16 w-16 mx-auto mb-6 text-primary opacity-80" />
                                                 <p className="text-lg font-semibold text-slate-600 mb-2">{step.placeholderLabel}</p>
                                                 <p className="text-sm text-slate-400 uppercase tracking-widest">Live Preview</p>
                                             </div>
