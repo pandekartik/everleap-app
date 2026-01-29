@@ -154,7 +154,7 @@ class CreditService:
         """
         # Get total usage
         total_query = select(
-            func.sum(CreditUsage.tokens_used).label('total_tokens'),
+            func.sum(CreditUsage.total_tokens).label('total_tokens'),
             func.sum(CreditUsage.total_cost).label('total_cost'),
             func.count(CreditUsage.id).label('total_operations')
         ).where(CreditUsage.company_id == company_id)
@@ -165,7 +165,7 @@ class CreditService:
         # Get usage by operation
         by_operation_query = select(
             CreditUsage.operation,
-            func.sum(CreditUsage.tokens_used).label('tokens'),
+            func.sum(CreditUsage.total_tokens).label('tokens'),
             func.sum(CreditUsage.total_cost).label('cost'),
             func.count(CreditUsage.id).label('count')
         ).where(

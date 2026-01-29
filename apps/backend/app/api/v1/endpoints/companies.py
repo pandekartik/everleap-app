@@ -2,7 +2,7 @@
 Company and organization management API endpoints.
 Handles company creation, user management, and dashboard metrics.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -67,7 +67,7 @@ async def create_company(
         diversity_policy=company_data.diversity_policy,
         subscription_tier=company_data.subscription_tier,
         api_credits_limit=company_data.api_credits_limit,
-        next_invoice_date=datetime.utcnow() + timedelta(days=30)
+        next_invoice_date=datetime.now(timezone.utc) + timedelta(days=30)
     )
     
     db.add(company)
@@ -336,7 +336,7 @@ async def create_user(
     # Generate invitation token
     invitation_token = create_email_verification_token(user.email)
     user.email_verification_token = invitation_token
-    user.email_verification_expires = datetime.utcnow() + timedelta(days=7)
+    user.email_verification_expires = datetime.now(timezone.utc) + timedelta(days=7)
     
     await db.commit()
     await db.refresh(user)

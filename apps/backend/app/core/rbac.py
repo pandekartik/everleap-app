@@ -219,7 +219,7 @@ def require_hr():
     return require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.HR)
 
 
-def check_company_access(user: CurrentUser, company_id: UUID) -> None:
+def check_company_access(user: CurrentUser, company_id) -> None:
     """
     Verify that a user has access to a specific company.
     Super admins have access to all companies.
@@ -227,7 +227,7 @@ def check_company_access(user: CurrentUser, company_id: UUID) -> None:
     
     Args:
         user: Current authenticated user
-        company_id: Company ID to check access for
+        company_id: Company ID to check access for (can be str or UUID)
         
     Raises:
         HTTPException: If user doesn't have access to the company
@@ -235,12 +235,21 @@ def check_company_access(user: CurrentUser, company_id: UUID) -> None:
     if user.is_super_admin:
         return
     
+<<<<<<< HEAD
     # Compare as strings to handle UUID vs str discrepancies
     if str(user.company_id) != str(company_id):
+=======
+    # Convert company_id to UUID if it's a string for proper comparison
+    if isinstance(company_id, str):
+        company_id = UUID(company_id)
+    
+    if user.company_id != company_id:
+>>>>>>> 1642601 (Everleap Backend v1.0.2)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Access denied. You can only access your own company. {user.company_id} vs {company_id}"
         )
+
 
 
 def check_resource_ownership(

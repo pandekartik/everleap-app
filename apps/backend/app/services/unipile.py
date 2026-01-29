@@ -610,25 +610,36 @@ class UnipileService:
             
             # Step 4: Update database
             linkedin_job_id = publish_result.get("id")
-            linkedin_url = publish_result.get("url")
-            
+            linkedin_job_url = publish_result.get("url")
+            # Update job in database with LinkedIn posting info
             await db.execute(
                 update(Job)
                 .where(Job.id == job_id)
                 .values(
                     linkedin_job_id=linkedin_job_id,
-                    linkedin_url=linkedin_url,
+                    linkedin_job_url=linkedin_job_url,
                     linkedin_posted_at=datetime.utcnow(),
                     updated_at=datetime.utcnow()
                 )
             )
+            
+            # Also create JobPosting record for tracking
+            from models import JobPosting
+            linkedin_posting = JobPosting(
+                job_id=job_id,
+                platform="linkedin",
+                external_id=linkedin_job_id,
+                post_url=linkedin_job_url,
+                status="active"
+            )
+            db.add(linkedin_posting)
             await db.commit()
             
             return {
                 "success": True,
                 "draft_job_id": draft_job_id,
                 "linkedin_job_id": linkedin_job_id,
-                "linkedin_url": linkedin_url,
+                "linkedin_url": linkedin_job_url,
                 "status": publish_result.get("status", "OPEN"),
                 "publish_options": draft_result.get("publish_options", {})
             }

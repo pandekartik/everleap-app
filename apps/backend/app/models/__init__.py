@@ -203,6 +203,8 @@ class Job(Base):
     is_published = Column(Boolean, default=False)
     published_at = Column(DateTime(timezone=True))
     linkedin_job_url = Column(Text)
+    linkedin_job_id = Column(String(255))  # Unipile/LinkedIn job posting ID
+    linkedin_posted_at = Column(DateTime(timezone=True))  # When posted to LinkedIn
     career_page_url = Column(Text)
     unique_job_code = Column(String(50), unique=True, index=True)
     tokens_used = Column(Integer, default=0)

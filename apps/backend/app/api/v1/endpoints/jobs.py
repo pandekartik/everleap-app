@@ -3,7 +3,8 @@ Jobs API endpoints - Complete implementation.
 Handles job creation, AI generation, publishing, and management.
 """
 import json
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from math import ceil
 from typing import Optional
 from uuid import UUID
@@ -34,6 +35,8 @@ from services.audit import audit_service
 from services.credit import credit_service
 from services.unipile import unipile_service
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -333,7 +336,7 @@ async def publish_job(
 
     # Update job status
     job.is_published = True
-    job.published_at = datetime.utcnow()
+    job.published_at = datetime.now(timezone.utc)
     job.status = "published"
     
     await db.commit()

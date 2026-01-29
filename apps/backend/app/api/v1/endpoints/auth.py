@@ -95,7 +95,7 @@ async def register_candidate(
     # Generate verification token
     verification_token = create_email_verification_token(user.email)
     user.email_verification_token = verification_token
-    user.email_verification_expires = datetime.utcnow() + timedelta(hours=24)
+    user.email_verification_expires = datetime.now(timezone.utc) + timedelta(hours=24)
     
     await db.commit()
     await db.refresh(user)
@@ -120,7 +120,7 @@ async def register_candidate(
     refresh_token = RefreshToken(
         user_id=user.id,
         token=refresh_token_str,
-        expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     db.add(refresh_token)
     await db.commit()
@@ -172,7 +172,7 @@ async def login(
     # Update last login
     await db.execute(
         update(User).where(User.id == user.id).values(
-            last_login_at=datetime.utcnow()
+            last_login_at=datetime.now(timezone.utc)
         )
     )
     await db.commit()
@@ -196,7 +196,7 @@ async def login(
     refresh_token = RefreshToken(
         user_id=user.id,
         token=refresh_token_str,
-        expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     db.add(refresh_token)
     await db.commit()
@@ -269,7 +269,7 @@ async def refresh_token(
         new_token_record = RefreshToken(
             user_id=stored_token.user_id,
             token=new_refresh_token,
-            expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         )
         db.add(new_token_record)
         await db.commit()
@@ -537,7 +537,7 @@ async def request_password_reset(
         await db.execute(
             update(User).where(User.id == user.id).values(
                 password_reset_token=reset_token,
-                password_reset_expires=datetime.utcnow() + timedelta(hours=1)
+                password_reset_expires=datetime.now(timezone.utc) + timedelta(hours=1)
             )
         )
         await db.commit()
@@ -588,7 +588,7 @@ async def reset_password_form(
             })
         
         # Check token expiration
-        if user.password_reset_expires and user.password_reset_expires < datetime.utcnow():
+        if user.password_reset_expires and user.password_reset_expires < datetime.now(timezone.utc):
             return templates.TemplateResponse("reset_error.html", {
                 "request": request,
                 "error": "Password reset link has expired"
@@ -653,7 +653,7 @@ async def reset_password_submit(
             })
         
         # Check token expiration
-        if user.password_reset_expires and user.password_reset_expires < datetime.utcnow():
+        if user.password_reset_expires and user.password_reset_expires < datetime.now(timezone.utc):
             return templates.TemplateResponse("reset_error.html", {
                 "request": request,
                 "error": "Password reset link has expired"
@@ -722,7 +722,7 @@ async def logout(
     await db.execute(
         update(RefreshToken).where(
             RefreshToken.token == refresh_data.refresh_token
-        ).values(revoked_at=datetime.utcnow())
+        ).values(revoked_at=datetime.now(timezone.utc))
     )
     await db.commit()
     
