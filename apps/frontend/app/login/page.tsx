@@ -86,7 +86,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
             <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 shadow-xl rounded-2xl overflow-hidden bg-card border">
                 {/* Left Side: Brand & Context */}
-                <div className="p-8 md:p-12 bg-zinc-900 text-white flex flex-col justify-between">
+                <div className="p-8 md:p-12 bg-[#000926] text-white flex flex-col justify-between">
                     <div>
                         <div className="flex items-center gap-2 mb-8">
                             <img src="/Logo.svg" alt="Everleap" className="h-8 w-auto invert brightness-0" />
