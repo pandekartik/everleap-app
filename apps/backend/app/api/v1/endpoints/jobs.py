@@ -75,7 +75,7 @@ async def create_job(
         currency=job_data.currency,
         equity=job_data.equity,
         direct_job_post=job_data.direct_job_post,
-        screening_questions=job_data.screening_questions.model_dump() if job_data.screening_questions else None,
+        screening_questions=[q.model_dump() for q in job_data.screening_questions] if job_data.screening_questions else None,
         status="draft"
     )
     
@@ -104,10 +104,13 @@ async def create_job(
                 "equity": job_data.equity
             })
             
-            # Run JD generation agent
+            # Run JD generation agent with company info
             result = await job_description_agent.execute(
                 input_data=agent_input,
-                metadata={"diversity_policy": company.diversity_policy}
+                metadata={
+                    "diversity_policy": company.diversity_policy,
+                    "company_name": company.name
+                }
             )
             
             if result.success:
@@ -310,8 +313,15 @@ async def publish_job(
     
     # Post to LinkedIn if requested
     if publish_data.post_to_linkedin:
+        # Check if LinkedIn organization is configured
+        if not company.linkedin_organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="LinkedIn organization not configured. Admin must set up LinkedIn company page first."
+            )
+        
         try:
-            linkedin_result = await unipile_service.create_linkedin_job_posting(
+            linkedin_result = await unipile_service.create_and_publish_linkedin_job(
                 db=db,
                 company_id=job.company_id,
                 job_id=job.id,
@@ -319,19 +329,24 @@ async def publish_job(
                 job_description=job.job_description,
                 location=job.location,
                 employment_type=job.employment_type,
-                workplace_type="ONSITE",  # Or get from publish_data
-                application_url=career_page_url,
-                organization_id=None  # Or get from publish_data for company page posting
+                workplace_type="REMOTE" if job.is_remote else "ON_SITE",
+                company_name=company.name,
+                application_url=career_page_url,  # Applicants click to apply here
+                screening_questions=job.screening_questions,
+                use_free_posting=publish_data.use_free_posting if hasattr(publish_data, 'use_free_posting') else True,
+                daily_budget=publish_data.daily_budget if hasattr(publish_data, 'daily_budget') else None
             )
             
             if linkedin_result["success"]:
-                # Fields are already updated in database by the service
-                pass  # linkedin_job_id, linkedin_url, linkedin_posted_at set by service
+                logger.info(f"LinkedIn job posted successfully for job_id={job.id}, linkedin_job_id={linkedin_result.get('linkedin_job_id')}")
+            else:
+                # LinkedIn posting failed - log reason but don't block
+                logger.warning(f"LinkedIn posting failed for job_id={job.id}: {linkedin_result.get('error')}")
                 
         except Exception as e:
             # Log but don't block job publishing
             logger.exception(
-                f"LinkedIn posting failed for job_id={job.id}: {str(e)}"
+                f"LinkedIn posting exception for job_id={job.id}: {str(e)}"
             )
 
     # Update job status

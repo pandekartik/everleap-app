@@ -82,6 +82,12 @@ class AuditAction(str, enum.Enum):
     APPLICATION_SUBMITTED = "APPLICATION_SUBMITTED"
 
 
+class UserStatus(str, enum.Enum):
+    INVITED = "INVITED"    # Created by admin, awaiting password setup
+    ACTIVE = "ACTIVE"      # Password set, can login
+    DELETED = "DELETED"    # Soft deleted, cannot login
+
+
 # Models
 class Company(Base):
     __tablename__ = "companies"
@@ -92,6 +98,8 @@ class Company(Base):
     logo_url = Column(Text)
     website = Column(Text)
     linkedin_url = Column(Text)
+    linkedin_organization_id = Column(String(255))  # Selected LinkedIn company page ID for job posting
+    linkedin_organization_name = Column(String(255))  # Display name of selected company page
     diversity_policy = Column(Text)
     total_storage_used = Column(BigInteger, default=0)
     api_credits_used = Column(Integer, default=0)
@@ -133,6 +141,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True))
+    status = Column(Enum(UserStatus, name='user_status', create_type=False), default=UserStatus.INVITED)
     
     # Relationships
     company = relationship("Company", back_populates="users")

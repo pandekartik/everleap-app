@@ -74,11 +74,8 @@ class JobDescriptionGenerated(BaseModel):
 class JobPublishRequest(BaseModel):
     """Schema for publishing a job."""
     post_to_linkedin: bool = False
-    organization_id: Optional[str] = None
-    workplace_type: str = "ONSITE"
-    company_apply_url: Optional[str] = None
-    use_free_posting: bool = True  # NEW
-    daily_budget: Optional[float] = None  # NEW
+    use_free_posting: bool = True  # For LinkedIn: True = free, False = promoted
+    daily_budget: Optional[float] = None  # Required if use_free_posting=False
 
 
 class JobResponse(BaseModel):

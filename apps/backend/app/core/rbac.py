@@ -235,19 +235,14 @@ def check_company_access(user: CurrentUser, company_id) -> None:
     if user.is_super_admin:
         return
     
-<<<<<<< HEAD
-    # Compare as strings to handle UUID vs str discrepancies
-    if str(user.company_id) != str(company_id):
-=======
     # Convert company_id to UUID if it's a string for proper comparison
     if isinstance(company_id, str):
         company_id = UUID(company_id)
     
     if user.company_id != company_id:
->>>>>>> 1642601 (Everleap Backend v1.0.2)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access denied. You can only access your own company. {user.company_id} vs {company_id}"
+            detail="Access denied. You can only access your own company."
         )
 
 

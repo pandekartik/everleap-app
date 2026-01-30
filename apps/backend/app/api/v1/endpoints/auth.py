@@ -27,7 +27,7 @@ from core.security import (
     verify_token_type,
 )
 from db.session import get_db
-from models import Candidate, RefreshToken, User, UserRole, UserRoleAssignment
+from models import Candidate, RefreshToken, User, UserRole, UserRoleAssignment, UserStatus
 from schemas.auth import (
     EmailVerificationRequest,
     LoginRequest,
@@ -321,14 +321,15 @@ async def set_password(
                 detail="Token expired"
             )
         
-        # Update password
+        # Update password and set status to ACTIVE
         await db.execute(
             update(User).where(User.id == user.id).values(
                 password_hash=get_password_hash(password_data.password),
                 is_password_set=True,
                 is_email_verified=True,
                 email_verification_token=None,
-                email_verification_expires=None
+                email_verification_expires=None,
+                status=UserStatus.ACTIVE
             )
         )
         await db.commit()

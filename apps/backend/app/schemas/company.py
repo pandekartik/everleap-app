@@ -46,6 +46,8 @@ class CompanyResponse(CompanyBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    admin_status: Optional[str] = None  # Status of the company admin (INVITED, ACTIVE, DELETED)
+    admin_email: Optional[str] = None  # Email of the company admin
     
     class Config:
         from_attributes = True
@@ -97,6 +99,7 @@ class UserListItem(BaseModel):
     is_email_verified: bool
     is_active: bool
     is_password_set: bool
+    status: Optional[str] = None  # INVITED, ACTIVE, DELETED
     last_login_at: Optional[datetime]
     created_at: datetime
     

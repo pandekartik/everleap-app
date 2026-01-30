@@ -4,6 +4,7 @@ Based on official Unipile documentation with proper draft-publish flow.
 
 API Base URL: https://api27.unipile.com:15749/api/v1/
 """
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -14,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from models import OAuthToken, Job
+
+logger = logging.getLogger(__name__)
 
 
 class UnipileService:
@@ -31,7 +34,7 @@ class UnipileService:
     def __init__(self):
         """Initialize Unipile service."""
         self.api_key = settings.UNIPILE_API_KEY
-        self.api_url = settings.UNIPILE_API_URL
+        self.api_url = settings.UNIPILE_API_URL.rstrip('/')  # Remove trailing slash
         self.headers = {
             "X-API-KEY": self.api_key,
             "accept": "application/json",
@@ -53,12 +56,25 @@ class UnipileService:
         
         API: POST /hosted/accounts/link
         Docs: https://developer.unipile.com/reference/hostedaccountcontroller_createhostedaccountlink
+        
+        Required fields:
+        - expiresOn: ISO 8601 datetime (YYYY-MM-DDTHH:MM:SS.sssZ)
+        - api_url: Your Unipile server URL
+        - type: "create" for new connections
+        - providers: Array of providers like ["LINKEDIN"]
         """
         try:
+            # Calculate expiration (24 hours from now)
+            expires_on = (datetime.utcnow() + timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            
             payload = {
-                "provider": provider,
-                "success_redirect_url": success_redirect_url or f"{settings.FRONTEND_URL}/settings/integrations?linkedin=success",
-                "failure_redirect_url": failure_redirect_url or f"{settings.FRONTEND_URL}/settings/integrations?linkedin=error"
+                "type": "create",
+                "providers": [provider],
+                "api_url": self.api_url,
+                "expiresOn": expires_on,
+                "notify_url": success_redirect_url,  # Backend webhook URL - Unipile will POST account_id here
+                "success_redirect_url": "https://www.everleap.in/dashboard?linkedin=success",  # User sees this after OAuth
+                "failure_redirect_url": failure_redirect_url
             }
             
             async with httpx.AsyncClient(verify=False) as client:
@@ -80,7 +96,7 @@ class UnipileService:
                 }
                 
         except httpx.HTTPError as e:
-            error_detail = e.response.text if hasattr(e.response, 'text') else str(e)
+            error_detail = e.response.text if hasattr(e, 'response') and hasattr(e.response, 'text') else str(e)
             return {
                 "success": False,
                 "error": f"Failed to create hosted link: {error_detail}"
@@ -235,13 +251,15 @@ class UnipileService:
         - Unipile manages LinkedIn token refresh internally
         """
         try:
-            # Get account details from Unipile
-            account_result = await self.get_account(account_id)
-            
-            if not account_result.get("success"):
-                return account_result
-            
-            account = account_result["account"]
+            # Get account details from Unipile (optional - for profile info)
+            account = {}
+            try:
+                account_result = await self.get_account(account_id)
+                if account_result.get("success"):
+                    account = account_result.get("account", {})
+            except Exception as e:
+                # Log but don't fail - we can still save the account_id
+                print(f"[UNIPILE] Warning: Could not get account details: {e}")
             
             # Store in database
             result = await db.execute(
@@ -252,8 +270,8 @@ class UnipileService:
             )
             existing_token = result.scalar_one_or_none()
             
-            # Set far-future expiry (Unipile accounts don't expire)
-            expires_at = datetime.utcnow() + timedelta(days=3650)  # 10 years
+            # Set far-future expiry (Unipile accounts don't expire traditionally)
+            expires_at = datetime.utcnow() + timedelta(days=60)  # Unipile suggests ~60 days
             
             if existing_token:
                 # Update existing
@@ -285,6 +303,8 @@ class UnipileService:
             
             await db.commit()
             
+            print(f"[UNIPILE] Successfully saved LinkedIn account_id={account_id} for company={company_id}")
+            
             return {
                 "success": True,
                 "account_id": account_id,
@@ -298,49 +318,116 @@ class UnipileService:
             
         except Exception as e:
             await db.rollback()
+            print(f"[UNIPILE] Error saving account: {e}")
             return {
                 "success": False,
                 "error": f"Failed to handle connection: {str(e)}"
             }
     
     # ========================================================================
-    # LINKEDIN ORGANIZATIONS (Company Pages)
+    # LINKEDIN COMPANY PROFILE (For Job Posting)
     # ========================================================================
     
-    async def get_linkedin_organizations(
+    async def get_linkedin_company_profile(
         self,
-        account_id: str
+        account_id: str,
+        company_identifier: str
     ) -> Dict[str, Any]:
         """
-        Get LinkedIn organizations (company pages) that user can post to.
+        Get LinkedIn company profile by company identifier.
         
-        API: GET /linkedin/{account_id}/organizations
-        Docs: https://developer.unipile.com/reference/linkedincontroller_getorganizations
+        The company_identifier can be:
+        - Company vanity name (e.g., 'everleap-in' from linkedin.com/company/everleap-in)
+        - Company ID (numeric ID like '109701240')
+        - Company URN
+        
+        API: GET /api/v1/linkedin/company/{identifier}?account_id=xxx
+        Docs: https://developer.unipile.com/reference/linkedincontroller_getcompanyprofile
+        
+        Returns company details including organization_id needed for job posting.
         """
         try:
             async with httpx.AsyncClient(verify=False) as client:
+                # Correct endpoint: /linkedin/company/{identifier}?account_id=xxx
                 response = await client.get(
-                    f"{self.api_url}/linkedin/{account_id}/organizations",
+                    f"{self.api_url}/linkedin/company/{company_identifier}",
                     headers=self.headers,
+                    params={
+                        "account_id": account_id
+                    },
                     timeout=30.0
                 )
                 
                 response.raise_for_status()
                 data = response.json()
                 
-                organizations = data if isinstance(data, list) else []
+                return {
+                    "success": True,
+                    "company": data,
+                    "organization_id": data.get("id") or data.get("entity_urn") or data.get("entityUrn") or data.get("company_id"),
+                    "name": data.get("name"),
+                    "vanity_name": data.get("vanityName") or data.get("vanity_name") or data.get("universal_name"),
+                    "logo_url": data.get("logoUrl") or data.get("logo_url") or data.get("logo"),
+                    "follower_count": data.get("followerCount") or data.get("follower_count"),
+                    "description": data.get("description")
+                }
+                
+        except httpx.HTTPError as e:
+            error_detail = ""
+            if hasattr(e, 'response') and hasattr(e.response, 'text'):
+                error_detail = e.response.text
+            return {
+                "success": False,
+                "error": f"Failed to get company profile: {error_detail or str(e)}"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to get company profile: {str(e)}"
+            }
+    
+    async def search_linkedin_companies(
+        self,
+        account_id: str,
+        company_name: str
+    ) -> Dict[str, Any]:
+        """
+        Search for LinkedIn companies by name.
+        
+        API: POST /api/v1/linkedin/search
+        Docs: https://developer.unipile.com/reference/linkedincontroller_search
+        
+        This helps Admin find their company to get the organization_id.
+        """
+        try:
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.post(
+                    f"{self.api_url}/linkedin/search",
+                    headers=self.headers,
+                    json={
+                        "account_id": account_id,
+                        "type": "COMPANIES",
+                        "keywords": company_name
+                    },
+                    timeout=30.0
+                )
+                
+                response.raise_for_status()
+                data = response.json()
+                
+                companies = data.get("items", []) if isinstance(data, dict) else data
                 
                 return {
                     "success": True,
-                    "organizations": organizations,
-                    "count": len(organizations)
+                    "companies": companies,
+                    "count": len(companies)
                 }
                 
         except Exception as e:
             return {
                 "success": False,
-                "error": f"Failed to get organizations: {str(e)}",
-                "organizations": []
+                "error": f"Failed to search companies: {str(e)}",
+                "companies": []
             }
     
     # ========================================================================
@@ -355,76 +442,101 @@ class UnipileService:
         location: str,
         employment_type: str,
         workplace_type: str,
-        application_url: str,
-        organization_id: Optional[str] = None,
-        listed_at: Optional[int] = None,
-        company_apply_url: Optional[str] = None
+        company_name: str,
+        application_url: Optional[str] = None,  # Career page URL for applicants
+        screening_questions: Optional[list] = None,
+        auto_rejection_template: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Step 1: Create LinkedIn job posting draft.
         
-        API: POST /linkedin/{account_id}/job-postings
+        API: POST /linkedin/jobs
         Docs: https://developer.unipile.com/reference/linkedincontroller_createjobposting
+        
+        Body Params per Unipile docs:
+        - account_id: string (required) - An Unipile account id
+        - job_title: {text: string} (required) - Plain text job title
+        - company: {text: string} (required) - Plain text company name
+        - workplace: enum (required) - ON_SITE, HYBRID, REMOTE
+        - location: string (required) - Location ID or name
+        - employment_status: enum - FULL_TIME, PART_TIME, CONTRACT, etc.
+        - description: string (required) - HTML formatted
+        - screening_questions: array (optional)
+        - auto_rejection_template: string (optional)
         
         Returns:
             {
                 "success": True,
                 "object": "LinkedinJobPostingDraftCreated",
-                "job_id": "draft_123",  // LinkedIn draft ID (use for publish)
+                "job_id": "draft_123",
                 "project_id": "proj_456",
-                "publish_options": {
-                    "free": {
-                        "eligible": true,
-                        "estimated_monthly_applicants": 50
-                    },
-                    "promoted": {
-                        "estimated_monthly_applicants": 200,
-                        "currency": "USD",
-                        "daily_budget": {...}
-                    }
-                }
+                "publish_options": {...}
             }
         """
         try:
             # Map employment type to LinkedIn format
-            employment_type_map = {
+            employment_status_map = {
                 "FULL_TIME": "FULL_TIME",
                 "PART_TIME": "PART_TIME",
                 "CONTRACT": "CONTRACT",
                 "TEMPORARY": "TEMPORARY",
+                "OTHER": "OTHER",
                 "VOLUNTEER": "VOLUNTEER",
                 "INTERNSHIP": "INTERNSHIP"
             }
-            linkedin_employment_type = employment_type_map.get(employment_type.upper(), "FULL_TIME")
+            linkedin_employment_status = employment_status_map.get(employment_type.upper(), "FULL_TIME")
             
-            # Prepare payload
+            # Map workplace type
+            workplace_map = {
+                "ON_SITE": "ON_SITE",
+                "ONSITE": "ON_SITE",
+                "HYBRID": "HYBRID",
+                "REMOTE": "REMOTE"
+            }
+            linkedin_workplace = workplace_map.get(workplace_type.upper(), "ON_SITE")
+            
+            # Prepare payload per Unipile API docs
+            # NOTE: location requires numeric ID from Unipile search params API
+            # We skip location for now if it's not a numeric ID
             payload = {
-                "title": job_title[:80],  # Max 80 chars
-                "description": job_description[:25000],  # Max 25,000 chars
-                "location": {
-                    "name": location
-                },
-                "employmentType": linkedin_employment_type,
-                "workplaceType": workplace_type.upper(),
-                "externalApplyUrl": application_url
+                "account_id": account_id,
+                "job_title": {"text": job_title[:200]},  # Plain text based job title
+                "company": {"text": company_name[:200]},  # Plain text based company
+                "workplace": linkedin_workplace,
+                "employment_status": linkedin_employment_status,
+                "description": job_description[:25000]  # HTML formatted, max 25,000 chars
             }
             
+            # Only add location if it's a numeric ID (Unipile requirement)
+            # TODO: Add location lookup service to convert text locations to IDs
+            if location and location.isdigit():
+                payload["location"] = location
+            
             # Add optional fields
-            if organization_id:
-                payload["organizationId"] = organization_id
+            if screening_questions:
+                # Format screening questions for Unipile
+                formatted_questions = []
+                for q in screening_questions:
+                    formatted_questions.append({
+                        "question": q.get("question", ""),
+                        "required": q.get("required", False)
+                    })
+                payload["screening_questions"] = formatted_questions
             
-            if listed_at:
-                payload["listedAt"] = listed_at
-            else:
-                payload["listedAt"] = int(datetime.utcnow().timestamp() * 1000)
+            if auto_rejection_template:
+                payload["auto_rejection_template"] = auto_rejection_template
             
-            if company_apply_url:
-                payload["companyApplyUrl"] = company_apply_url
+            # Add application URL (career page URL) for applicant redirection
+            if application_url:
+                payload["company_apply_url"] = application_url
             
-            # Create draft
+            logger.info(f"Creating LinkedIn job draft - URL: {self.api_url}/linkedin/jobs")
+            logger.debug(f"LinkedIn job draft payload: {payload}")
+            
+            # Create draft - Unipile API: POST /linkedin/jobs
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.post(
-                    f"{self.api_url}/linkedin/{account_id}/job-postings",
+                    f"{self.api_url}/linkedin/jobs",
                     headers=self.headers,
                     json=payload,
                     timeout=60.0
@@ -433,6 +545,8 @@ class UnipileService:
                 response.raise_for_status()
                 data = response.json()
             
+            logger.info(f"LinkedIn job draft created successfully: {data}")
+            
             return {
                 "success": True,
                 **data  # Include all response data (object, job_id, project_id, publish_options)
@@ -440,12 +554,14 @@ class UnipileService:
             
         except httpx.HTTPStatusError as e:
             error_detail = e.response.text if hasattr(e.response, 'text') else str(e)
+            logger.error(f"LinkedIn job draft failed - HTTP {e.response.status_code}: {error_detail}")
             return {
                 "success": False,
                 "error": f"Failed to create draft: {error_detail}",
                 "status_code": e.response.status_code if hasattr(e.response, 'status_code') else None
             }
         except Exception as e:
+            logger.exception(f"LinkedIn job draft exception: {str(e)}")
             return {
                 "success": False,
                 "error": f"Failed to create draft: {str(e)}"
@@ -487,9 +603,16 @@ class UnipileService:
             if not use_free_posting and daily_budget:
                 payload["daily_budget"] = daily_budget
             
+            # Add account_id to body - Unipile API needs this
+            payload["account_id"] = account_id
+            
+            logger.info(f"Publishing LinkedIn job draft - URL: {self.api_url}/linkedin/jobs/{job_id}/publish")
+            logger.debug(f"Publish payload: {payload}")
+            
+            # Unipile API: POST /linkedin/jobs/{draft_id}/publish
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.post(
-                    f"{self.api_url}/linkedin/{account_id}/job-postings/{job_id}/publish",
+                    f"{self.api_url}/linkedin/jobs/{job_id}/publish",
                     headers=self.headers,
                     json=payload,
                     timeout=60.0
@@ -526,8 +649,9 @@ class UnipileService:
         location: str,
         employment_type: str,
         workplace_type: str,
-        application_url: str,
-        organization_id: Optional[str] = None,
+        company_name: str,
+        application_url: Optional[str] = None,  # Career page URL for applicants
+        screening_questions: Optional[list] = None,
         use_free_posting: bool = True,
         daily_budget: Optional[float] = None
     ) -> Dict[str, Any]:
@@ -578,8 +702,9 @@ class UnipileService:
                 location=location,
                 employment_type=employment_type,
                 workplace_type=workplace_type,
+                company_name=company_name,
                 application_url=application_url,
-                organization_id=organization_id
+                screening_questions=screening_questions
             )
             
             if not draft_result.get("success"):
@@ -668,39 +793,46 @@ class UnipileService:
         """
         Edit LinkedIn job posting (before or after publishing).
         
-        API: PATCH /linkedin/{account_id}/job-postings/{jobId}
+        API: PATCH /linkedin/jobs/{job_id}
         Docs: https://developer.unipile.com/reference/linkedincontroller_editjobposting
         
-        Args:
-            account_id: Unipile account ID
-            job_id: LinkedIn job_id (draft or published)
-            
-        Returns:
-            {"success": True/False}
+        Body params: account_id (required), job_title, company, workplace, location, 
+        employment_status, description, screening_questions
         """
         try:
-            payload = {}
+            # account_id is required in body
+            payload = {
+                "account_id": account_id
+            }
             
             if job_title:
-                payload["title"] = job_title[:80]
+                payload["job_title"] = {"text": job_title[:200]}
             if job_description:
                 payload["description"] = job_description[:25000]
             if location:
-                payload["location"] = {"name": location}
+                payload["location"] = location
             if employment_type:
-                payload["employmentType"] = employment_type.upper()
+                employment_map = {"FULL_TIME": "FULL_TIME", "PART_TIME": "PART_TIME", 
+                                  "CONTRACT": "CONTRACT", "TEMPORARY": "TEMPORARY",
+                                  "OTHER": "OTHER", "VOLUNTEER": "VOLUNTEER", "INTERNSHIP": "INTERNSHIP"}
+                payload["employment_status"] = employment_map.get(employment_type.upper(), "FULL_TIME")
             if workplace_type:
-                payload["workplaceType"] = workplace_type.upper()
+                workplace_map = {"ON_SITE": "ON_SITE", "ONSITE": "ON_SITE", "HYBRID": "HYBRID", "REMOTE": "REMOTE"}
+                payload["workplace"] = workplace_map.get(workplace_type.upper(), "ON_SITE")
             
-            if not payload:
+            if len(payload) <= 1:  # Only account_id, no fields to update
                 return {
                     "success": False,
                     "error": "No fields to update"
                 }
             
+            logger.info(f"Editing LinkedIn job - URL: {self.api_url}/linkedin/jobs/{job_id}")
+            logger.debug(f"Edit payload: {payload}")
+            
+            # Unipile API: PATCH /linkedin/jobs/{job_id}
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.patch(
-                    f"{self.api_url}/linkedin/{account_id}/job-postings/{job_id}",
+                    f"{self.api_url}/linkedin/jobs/{job_id}",
                     headers=self.headers,
                     json=payload,
                     timeout=60.0
@@ -744,10 +876,12 @@ class UnipileService:
             }
         """
         try:
+            # Unipile API: POST /linkedin/jobs/{job_id}/close?account_id=xxx
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.post(
-                    f"{self.api_url}/linkedin/{account_id}/job-postings/{job_id}/close",
+                    f"{self.api_url}/linkedin/jobs/{job_id}/close",
                     headers=self.headers,
+                    params={"account_id": account_id},
                     timeout=60.0
                 )
                 
@@ -773,13 +907,15 @@ class UnipileService:
         """
         Get LinkedIn job posting details.
         
-        API: GET /linkedin/{account_id}/job-postings/{jobId}
+        API: GET /linkedin/jobs/{jobId}?account_id=xxx
         """
         try:
+            # Unipile API: GET /linkedin/jobs/{job_id}?account_id=xxx
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.get(
-                    f"{self.api_url}/linkedin/{account_id}/job-postings/{job_id}",
+                    f"{self.api_url}/linkedin/jobs/{job_id}",
                     headers=self.headers,
+                    params={"account_id": account_id},
                     timeout=30.0
                 )
                 
